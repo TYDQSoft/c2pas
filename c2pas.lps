@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units>
+      <Unit>
+        <Filename Value="c2pas.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <TopLine Value="321"/>
+        <CursorPos X="5" Y="361"/>
+        <UsageCount Value="201"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="prehandler.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="246"/>
+        <CursorPos X="7" Y="280"/>
+        <UsageCount Value="201"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="converter.pas"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="13901"/>
+        <CursorPos X="30" Y="11331"/>
+        <UsageCount Value="201"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="strbase.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="57"/>
+        <CursorPos X="70" Y="77"/>
+        <UsageCount Value="186"/>
+      </Unit>
+      <Unit>
+        <Filename Value="unit1.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Unit1"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="19" Y="13"/>
+        <UsageCount Value="63"/>
+      </Unit>
+      <Unit>
+        <Filename Value="E:\Lazarus\fpcsrc\packages\fcl-passrc\src\pasresolver.pp"/>
+        <UnitName Value="PasResolver"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="22444"/>
+        <CursorPos X="27" Y="22454"/>
+        <UsageCount Value="8"/>
+      </Unit>
+      <Unit>
+        <Filename Value="E:\Lazarus\fpcsrc\packages\fcl-image\src\fpcolorspace.pas"/>
+        <UnitName Value="FPColorSpace"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="68"/>
+        <CursorPos X="11" Y="79"/>
+        <UsageCount Value="8"/>
+      </Unit>
+      <Unit>
+        <Filename Value="E:\Lazarus\fpcsrc\rtl\inc\objcbase.pp"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="175"/>
+        <CursorPos X="11" Y="181"/>
+        <UsageCount Value="8"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="27">
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="10377" Column="28" TopLine="10355"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="1608" Column="15" TopLine="1593"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="825" Column="21" TopLine="814"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="13835" Column="6" TopLine="13823"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="10042" Column="7" TopLine="10033"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="643" Column="11" TopLine="631"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="9995" Column="2" TopLine="9985"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="643" Column="11" TopLine="631"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="9995" Column="2" TopLine="9985"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="643" Column="11" TopLine="631"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="9995" Column="2" TopLine="9985"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="10460" Column="30" TopLine="10450"/>
+      </Position>
+      <Position>
+        <Filename Value="converter.pas"/>
+        <Caret Line="10597" Column="30" TopLine="10586"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="196" Column="10" TopLine="175"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="192" Column="10" TopLine="183"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="233" Column="12" TopLine="218"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="252" Column="37" TopLine="183"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="29" Column="24" TopLine="15"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="41" Column="40" TopLine="30"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="92" Column="20" TopLine="81"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="237" Column="12" TopLine="221"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="369" Column="18" TopLine="352"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="257" Column="13" TopLine="244"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="363" Column="19" TopLine="341"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="101" Column="30" TopLine="91"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="434" Column="48" TopLine="415"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="455" Column="12" TopLine="436"/>
+      </Position>
+      <Position>
+        <Filename Value="c2pas.lpr"/>
+        <Caret Line="107" Column="33" TopLine="92"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
+    <HistoryLists>
+      <List Name="LaunchingApplication" Type="File" Count="1">
+        <Item1 Value="C:\WINDOWS\system32\cmd.exe /C ${TargetCmdLine}"/>
+      </List>
+    </HistoryLists>
+  </ProjectSession>
+</CONFIG>

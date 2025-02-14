@@ -1,0 +1,459 @@
+program c2pas;
+
+uses prehandler,fileutil,sysutils,classes,converter;
+
+function c2pas_convert(inputname:string;includepath:array of string;outputtype:byte;
+outputname:string;needreference:boolean;debug:boolean):string;
+var ii,jj,kk:SizeInt;
+    tempstr,tempstr2,tempstr3:string;
+    source,totallist,partlist:TStringList;
+    content:string;
+    ctree:Pc_tree;
+    pastree,pastree2:Ppas_tree;
+    reffile,pasfile:Text;
+begin
+ {Loading the include file searching path}
+ ii:=1;
+ totallist:=TStringList.Create;
+ while(ii<=length(includepath))do
+  begin
+   partlist:=FindAllDirectories(includepath[ii]);
+   for jj:=1 to partlist.Count do
+    begin
+     totallist.Add(partlist[jj]);
+    end;
+   partlist.Free;
+   inc(ii);
+  end;
+ {Loading the solo original file}
+ source:=TStringList.Create;
+ source.LoadFromFile(inputname);
+ content:=source.Text;
+ source.Free;
+ {Prehandle the original file}
+ prehandler_handle_code(content,totallist,(ExtractFileExt(inputname)='.h')
+ or (ExtractFileExt(inputname)='.hpp'));
+ {Specifying the output type}
+ species:=outputtype;
+ {Specifying the output file name}
+ codename:=ExtractFileName(inputname);
+ kk:=Pos('.',codename);
+ codename:=Trim(Copy(codename,1,kk));
+ {If you need reference file,open reference switch to enable it}
+ if(needreference=true) and ((ExtractFileExt(inputname)='.h') or (ExtractFileExt(inputname)='.hpp')) then
+  begin
+   tempstr:=ExtractFilePath(inputname)+codename+'.h';
+   AssignFile(reffile,tempstr);
+   Rewrite(reffile);
+   writeln(reffile,content);
+   CloseFile(reffile);
+  end
+ else if(needreference=true) then
+  begin
+   tempstr:=ExtractFilePath(inputname)+codename+'.c';
+   AssignFile(reffile,tempstr);
+   Rewrite(reffile);
+   writeln(reffile,content);
+   CloseFile(reffile);
+  end;
+ {Translate the C code to C tree}
+ ctree:=construct_c_tree(content);
+ if(debug=true) then
+  begin
+   writeln('Total C code root tree Node Count:',ctree^.count);
+  end;
+ {Clear the original convert}
+ content:='';
+ {Translate the C tree to pascal tree}
+ pastree:=convert_c_tree_to_pas_tree(ctree);
+ if(debug=true) then
+  begin
+   writeln('Total Initial Pascal code root tree Node Count:',pastree^.count);
+  end;
+ {Destroy the C code tree}
+ destruct_c_tree(ctree);
+ {Reconstruct the pascal tree}
+ pastree2:=nil;
+ pas_tree_reconstruct(pastree,pastree2);
+ if(debug=true) then
+  begin
+   writeln('Total Handled Pascal code root tree Node Count:',pastree2^.count);
+  end;
+ {Destroy the initial Pascal code tree}
+ destruct_pas_tree(pastree);
+ {Output the pascal code file}
+ content:=convert_pas_tree_to_string(pastree2,0);
+ AssignFile(pasfile,outputname);
+ Rewrite(pasfile);
+ writeln(pasfile,content);
+ CloseFile(pasfile);
+ {Destroy the handled pascal code tree}
+ destruct_pas_tree(pastree2);
+ {Hint that the convertion is done}
+ writeln('Convertion is done!');
+ writeln('You can find the file in path '+ExpandFileName(outputname));
+ writeln('Press Enter to exit the program,you can use it as a assitant to code translation.');
+ readln;
+end;
+var i,j:SizeInt;
+    tempstr:string;
+    p1:string='';
+    p2:array of string;
+    p3:byte=1;
+    p4:string='';
+    p5:boolean=false;
+    p6:boolean=false;
+    total:SizeInt;
+label label1,label2,label3,label4;
+begin
+ {Handle the external commands}
+ if(ParamCount>1) then
+  begin
+   i:=1; j:=0;
+   while(i<=ParamCount)do
+    begin
+     tempstr:=ParamStr(i);
+     if(Copy(tempstr,1,2)='-i') or (Copy(tempstr,1,2)='-I') then
+      begin
+       tempstr:=Copy(tempstr,3,length(tempstr)-2);
+       if(tempstr[1]='"') or (tempstr[1]=#39) then
+        begin
+         tempstr:=Copy(tempstr,2,length(tempstr));
+        end;
+       if(FileExists(tempstr)=false) then
+        begin
+         writeln('ERROR:File '+tempstr+ 'does not exist.');
+         readln; exit;
+        end;
+       if(p1='') then
+        begin
+         p1:=tempstr;
+        end
+       else
+        begin
+         writeln('ERROR:Multiple input file is not allowed.');
+         readln; exit;
+        end;
+      end
+     else if(Copy(tempstr,1,2)='-o') or (Copy(tempstr,1,2)='-O') then
+      begin
+       tempstr:=Copy(tempstr,3,length(tempstr)-2);
+       if(tempstr[1]='"') or (tempstr[1]=#39) then
+        begin
+         tempstr:=Copy(tempstr,2,length(tempstr));
+        end;
+       if(p4='') then
+        begin
+         p4:=tempstr;
+        end
+       else
+        begin
+         writeln('ERROR:Multiple output file is not allowed.');
+         readln; exit;
+        end;
+      end
+     else if(Copy(tempstr,1,2)='-l') or (Copy(tempstr,1,2)='-L') then
+      begin
+       tempstr:=Copy(tempstr,3,length(tempstr)-2);
+       if(tempstr[1]='"') or (tempstr[1]=#39) then
+        begin
+         tempstr:=Copy(tempstr,2,length(tempstr));
+        end;
+       if(DirectoryExists(tempstr)) then
+        begin
+         inc(j);
+         SetLength(p2,j);
+         p2[j-1]:=tempstr;
+        end
+       else
+        begin
+         writeln('ERROR:Directory '+tempstr+' does not exist.');
+         readln; exit;
+        end;
+      end
+     else if(Copy(tempstr,1,2)='-r') or (Copy(tempstr,1,2)='-R') then
+      begin
+       tempstr:=Copy(tempstr,3,length(tempstr)-2);
+       if(tempstr[1]='"') or (tempstr[1]=#39) then
+        begin
+         tempstr:=Copy(tempstr,2,length(tempstr));
+        end;
+       if(LowerCase(tempstr)='on') then
+        begin
+         p5:=true;
+        end
+       else if(LowerCase(tempstr)='off') then
+        begin
+         p5:=false;
+        end
+       else
+        begin
+         writeln('ERROR:unknown reference switch mode '+tempstr+'.');
+         readln; exit;
+        end;
+      end
+     else if(Copy(tempstr,1,2)='-d') or (Copy(tempstr,1,2)='-D') then
+      begin
+       tempstr:=Copy(tempstr,3,length(tempstr)-2);
+       if(tempstr[1]='"') or (tempstr[1]=#39) then
+        begin
+         tempstr:=Copy(tempstr,2,length(tempstr));
+        end;
+       if(LowerCase(tempstr)='on') then
+        begin
+         p6:=true;
+        end
+       else if(LowerCase(tempstr)='off') then
+        begin
+         p6:=false;
+        end
+       else
+        begin
+         writeln('ERROR:unknown debug switch mode '+tempstr+'.');
+         readln; exit;
+        end;
+      end
+     else if(Copy(tempstr,1,2)='-t') or (Copy(tempstr,1,2)='-T') then
+      begin
+       tempstr:=Copy(tempstr,3,length(tempstr)-2);
+       if(tempstr[1]='"') or (tempstr[1]=#39) then
+        begin
+         tempstr:=Copy(tempstr,2,length(tempstr));
+        end;
+       if(LowerCase(tempstr)='u') or (LowerCase(tempstr)='unit') then
+        begin
+         p3:=1;
+        end
+       else if(LowerCase(tempstr)='p') or (LowerCase(tempstr)='program') then
+        begin
+         p3:=0;
+        end
+       else if(LowerCase(tempstr)='l') or (LowerCase(tempstr)='library') then
+        begin
+         p3:=2;
+        end
+       else
+        begin
+         writeln('ERROR:unknown pascal code file type  '+tempstr+'.');
+         readln; exit;
+        end;
+      end
+     else
+      begin
+       writeln('ERROR:Unknown command:'+ParamStr(i));
+       readln; exit;
+      end;
+     inc(i);
+    end;
+   if(p1='') then
+    begin
+     writeln('ERROR:no input file,program terminated.');
+     readln; exit;
+    end;
+   if(p4='') then
+    begin
+     writeln('no output file name,use out.pas as default.');
+     readln; exit;
+    end;
+   c2pas_convert(p1,p2,p3,p4,p5,p6);
+  end
+ else if(ParamCount=1) then
+  begin
+   if(ParamStr(1)='-h') or (ParamStr(1)='-H') then
+    begin
+     writeln('Template:c2pas <commands>');
+     writeln('         Tips:It will delete all comments in code to prevent it for errors');
+     writeln('         These are available codes below:');
+     writeln('         -i/-I means input file path(must be only one).');
+     writeln('         -i/-I<input file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\app.c"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/app.c"');
+     writeln('         -o/-O means output file path(must be only one).');
+     writeln('         -o/-O<output file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\out.pas"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/out.pas"');
+     writeln('         -l/-L means include file path(can be multiple).');
+     writeln('         -l/-L<include file path>');
+     writeln('         Example:(Windows)-l/-L"D:\binutils-2.43"');
+     writeln('                 (Linux/Unix)-l/-L"home/tydq/binutils-2.43"');
+     writeln('         -t/-T means your pascal code file type(must be only one)(unit is default).');
+     writeln('         -t/-T<program/unit/library>/<p/u/l>');
+     writeln('         Example:-t/-Tunit');
+     writeln('         -r/-R means whether you need reference c code file or not(must be only one).');
+     writeln('         -r/-R<On/Off>');
+     writeln('         Example:-r/-ROn');
+     writeln('         -d/-D means debug mode switch(On is open,off is close)(must be only one).');
+     writeln('         -d/-D<On/Off>');
+     writeln('         Example:-d/-DOn');
+     writeln('         -h/-H means you need the help manual for this program(must be only one)');
+     writeln('         Example:-h/-H');
+     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit');
+     writeln('         You can press enter to exit the help manual.');
+     readln;
+    end
+   else
+    begin
+     writeln('Your command '+ParamStr(1)+' is now invaild,look at these help manual below.');
+     writeln('Template:c2pas <commands>');
+     writeln('         Tips:It will delete all comments in code to prevent it for errors');
+     writeln('         These are available codes below:');
+     writeln('         -i/-I means input file path(must be only one).');
+     writeln('         -i/-I<input file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\app.c"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/app.c"');
+     writeln('         -o/-O means output file path(must be only one).');
+     writeln('         -o/-O<output file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\out.pas"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/out.pas"');
+     writeln('         -l/-L means include file path(can be multiple).');
+     writeln('         -l/-L<include file path>');
+     writeln('         Example:(Windows)-l/-L"D:\binutils-2.43"');
+     writeln('                 (Linux/Unix)-l/-L"home/tydq/binutils-2.43"');
+     writeln('         -t/-T means your pascal code file type(must be only one)(unit is default).');
+     writeln('         -t/-T<program/unit/library>/<p/u/l>');
+     writeln('         Example:-t/-Tunit');
+     writeln('         -r/-R means whether you need reference c code file or not(must be only one).');
+     writeln('         -r/-R<On/Off>');
+     writeln('         Example:-r/-ROn');
+     writeln('         -d/-D means debug mode switch(On is open,off is close)(must be only one).');
+     writeln('         -d/-D<On/Off>');
+     writeln('         Example:-d/-DOn');
+     writeln('         -h/-H means you need the help manual for this program(must be only one)');
+     writeln('         Example:-h/-H');
+     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit');
+     writeln('         You can press enter to exit the help manual.');
+     readln;
+    end;
+  end
+ else if(ParamCount=0) then
+  begin
+   writeln('No Command,Show the help manual.');
+   writeln('Do you want to enter Console I/O mode(Y/yes can continue)?');
+   readln(tempstr);
+   if(LowerCase(tempstr)<>'y') and (LowerCase(tempstr)<>'yes') then
+    begin
+     writeln('Template:c2pas <commands>');
+     writeln('         Tips:It will delete all comments in code to prevent it for errors');
+     writeln('         These are available codes below:');
+     writeln('         -i/-I means input file path(must be only one).');
+     writeln('         -i/-I<input file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\app.c"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/app.c"');
+     writeln('         -o/-O means output file path(must be only one).');
+     writeln('         -o/-O<output file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\out.pas"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/out.pas"');
+     writeln('         -l/-L means include file path(can be multiple).');
+     writeln('         -l/-L<include file path>');
+     writeln('         Example:(Windows)-l/-L"D:\binutils-2.43"');
+     writeln('                 (Linux/Unix)-l/-L"home/tydq/binutils-2.43"');
+     writeln('         -t/-T means your pascal code file type(must be only one)(unit is default).');
+     writeln('         -t/-T<program/unit/library>/<p/u/l>');
+     writeln('         Example:-t/-Tunit');
+     writeln('         -r/-R means whether you need reference c code file or not(must be only one).');
+     writeln('         -r/-R<On/Off>');
+     writeln('         Example:-r/-ROn');
+     writeln('         -d/-D means debug mode switch(On is open,off is close)(must be only one).');
+     writeln('         -d/-D<On/Off>');
+     writeln('         Example:-d/-DOn');
+     writeln('         -h/-H means you need the help manual for this program(must be only one)');
+     writeln('         Example:-h/-H');
+     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit');
+     readln; exit;
+    end;
+   writeln('Input the include path number:');
+   readln(total); i:=0;
+   while(i<total)do
+    begin
+     writeln('Input the include path ',j,':');
+     readln(tempstr);
+     if(DirectoryExists(tempstr)) then
+      begin
+       inc(i);
+       SetLength(p2,i);
+       p2[i-1]:=tempstr;
+      end
+     else
+      begin
+       writeln('ERROR:Directory '+tempstr+' does not exists.');
+       continue;
+      end;
+    end;
+   label1:
+   writeln('Input the input file name:');
+   readln(tempstr);
+   if(length(tempstr)>=2) and ((tempstr[1]='"') or (tempstr[1]=#39)) then
+    begin
+     if(tempstr[length(tempstr)]='"') or (tempstr[1]=#39) then
+     tempstr:=Copy(tempstr,2,length(tempstr)-2)
+     else
+     tempstr:=Copy(tempstr,2,length(tempstr)-1)
+    end;
+   if(FileExists(tempstr)) then
+    begin
+     p1:=tempstr;
+    end
+   else
+    begin
+     writeln('ERROR:File '+tempstr+' does not exist.');
+     goto label1;
+    end;
+   label2:
+   writeln('Input the output file type:');
+   readln(tempstr);
+   if(LowerCase(tempstr)='l') or (LowerCase(tempstr)='library') then
+    begin
+     p3:=2;
+    end
+   else if(LowerCase(tempstr)='p') or (LowerCase(tempstr)='program') then
+    begin
+     p3:=0;
+    end
+   else if(LowerCase(tempstr)='u') or (LowerCase(tempstr)='unit') then
+    begin
+     p3:=1;
+    end
+   else
+    begin
+     writeln('ERROR:Output file type '+tempstr+'.');
+     goto label2;
+    end;
+   writeln('Input the output file name:');
+   readln(tempstr);
+   p4:=tempstr;
+   label3:
+   writeln('Input Yes/No to open the switch of reference c code:');
+   readln(tempstr);
+   if(LowerCase(tempstr)='yes') or (LowerCase(tempstr)='y') then
+    begin
+     p5:=true;
+    end
+   else if(LowerCase(tempstr)='no') or (LowerCase(tempstr)='n') then
+    begin
+     p5:=false;
+    end
+   else
+    begin
+     writeln('ERROR:unknown switch mode '+tempstr+'.');
+     goto label3;
+    end;
+   label4:
+   writeln('Input Yes/No to open the switch of debugging code');
+   readln(tempstr);
+   if(LowerCase(tempstr)='yes') or (LowerCase(tempstr)='y') then
+    begin
+     p6:=true;
+    end
+   else if(LowerCase(tempstr)='no') or (LowerCase(tempstr)='n') then
+    begin
+     p6:=false;
+    end
+   else
+    begin
+     writeln('ERROR:unknown switch mode '+tempstr+'.');
+     goto label3;
+    end;
+   c2pas_convert(p1,p2,p3,p4,p5,p6);
+  end;
+end.
+
