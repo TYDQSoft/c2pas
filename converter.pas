@@ -1653,6 +1653,14 @@ begin
   begin
    exit(1);
   end
+ else if(Copy(str,1,2)='0b') or (Copy(str,1,2)='0B') then
+  begin
+   exit(1);
+  end
+ else if(Copy(str,1,2)='-0b') or (Copy(str,1,2)='-0B') then
+  begin
+   exit(1);
+  end
  else if(Copy(str,1,1)='L') and ((Copy(str,1,2)='L"') or (Copy(str,1,2)='L'#39)) then
   begin
    if(Copy(str,2,1)=#39) then
@@ -1701,23 +1709,46 @@ const hex1:string='0123456789ABCDEF';
       hex2:string='0123456789abcdef';
 var i,j,len:SizeInt;
     res:Sizeint;
+    isbinary:boolean;
     bool:boolean;
 begin
- if(Copy(str,1,3)='-0x') or (Copy(str,1,3)='-0X') then i:=4
- else if(Copy(str,1,2)='0x') or (Copy(str,1,2)='0X') then i:=3
+ isbinary:=false;
+ if(Copy(str,1,3)='-0x') or (Copy(str,1,3)='-0X') then
+  begin
+   i:=4;
+  end
+ else if(Copy(str,1,2)='0x') or (Copy(str,1,2)='0X') then
+  begin
+   i:=3;
+  end
+ else if(Copy(str,1,3)='-0b') or (Copy(str,1,3)='-0B') then
+  begin
+   i:=4; isbinary:=true;
+  end
+ else if(Copy(str,1,2)='0b') or (Copy(str,1,2)='0B') then
+  begin
+   i:=3; isbinary:=true;
+  end
  else if(Copy(str,1,1)='-') then i:=2 else i:=1;
  if(i mod 2=0) then bool:=true else bool:=false;
  len:=length(str); res:=0;
  while(i<=len)do
   begin
    j:=1;
-   while(j<=16)do
+   if(isbinary=false) then
     begin
-     if(str[i]=hex1[j]) then break;
-     if(str[i]=hex2[j]) then break;
-     inc(j);
+     while(j<=16)do
+      begin
+       if(str[i]=hex1[j]) then break;
+       if(str[i]=hex2[j]) then break;
+       inc(j);
+      end;
+     if(j<=16) then res:=res*16+j-1;
+    end
+   else
+    begin
+     res:=res*2+Byte(str[i])-Byte('0');
     end;
-   if(j<=16) then res:=res*16+j-1;
    inc(i);
   end;
  if(bool=true) then HexToInt:=-res else HexToInt:=res;
@@ -9903,6 +9934,28 @@ begin
      c_string_insert_string(tempcstr2,tempexp,i);
      inc(i,2); continue;
     end
+   else if(copy(tempexp.item[i-1],1,2)='-0x') or (copy(tempexp.item[i-1],1,2)='-0X') then
+    begin
+     tempcstr2:=c_string_generate_from_string(
+     '-$'+copy(tempexp.item[i-1],4,length(tempexp.item[i-1])-3),true);
+     c_string_delete_item(tempexp,i,1);
+     c_string_insert_string(tempcstr2,tempexp,i);
+     inc(i,3); continue;
+    end
+   else if(copy(tempexp.item[i-1],1,2)='0b') or (copy(tempexp.item[i-1],1,2)='0b') then
+    begin
+     tempcstr2:=c_string_generate_from_string(IntToStr(HexToInt(tempexp.item[i-1])),true);
+     c_string_delete_item(tempexp,i,1);
+     c_string_insert_string(tempcstr2,tempexp,i);
+     inc(i,1); continue;
+    end
+   else if(copy(tempexp.item[i-1],1,2)='-0b') or (copy(tempexp.item[i-1],1,2)='-0b') then
+    begin
+     tempcstr2:=c_string_generate_from_string(IntToStr(HexToInt(tempexp.item[i-1])),true);
+     c_string_delete_item(tempexp,i,1);
+     c_string_insert_string(tempcstr2,tempexp,i);
+     inc(i,1); continue;
+    end
    else if(copy(tempexp.item[i-1],1,1)='"') or (copy(tempexp.item[i-1],1,1)=#39) then
     begin
      tempexp.item[i-1]:=convert_c_string_to_pas_string(tempexp.item[i-1]);
@@ -10067,11 +10120,22 @@ begin
 end;
 function convert_c_number_to_pas_number(cnum:string):string;
 var i:SizeInt;
+    tempstr:string;
 begin
  if(copy(cnum,1,2)='-0x') or (copy(cnum,1,2)='-0X') then
  convert_c_number_to_pas_number:='-$'+copy(cnum,4,length(cnum)-3)
  else if(copy(cnum,1,2)='0x') or (copy(cnum,1,2)='0X') then
  convert_c_number_to_pas_number:='$'+copy(cnum,3,length(cnum)-2)
+ else if(copy(cnum,1,2)='-0b') or (copy(cnum,1,2)='-0B') then
+  begin
+   tempstr:=copy(cnum,2,length(cnum)-1);
+   convert_c_number_to_pas_number:='-'+IntToStr(HexToInt(tempstr));
+  end
+ else if(copy(cnum,1,2)='0b') or (copy(cnum,1,2)='0B') then
+  begin
+   tempstr:=cnum;
+   convert_c_number_to_pas_number:=IntToStr(HexToInt(tempstr));
+  end
  else
  convert_c_number_to_pas_number:=cnum;
 end;
