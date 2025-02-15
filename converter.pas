@@ -597,6 +597,7 @@ type c_string=packed record
                arrd:array of c_string;
                end;
      cov_func=packed record
+              layer:byte;
               isinline:boolean;
               abi:string;
               alias:string;
@@ -611,6 +612,15 @@ type c_string=packed record
                          arrc:byte;
                          arrd:array of SizeInt;
                          end;
+     cov_format=packed record
+                fmt:array of string;
+                count:SizeInt;
+                end;
+     cov_func_param=packed record
+                    funcname:string;
+                    param:array of c_string;
+                    count:SizeInt;
+                    end;
 
 function construct_c_tree(content:string):Pc_tree;
 function convert_c_tree_to_pas_tree(ctree:Pc_tree;pastree:Ppas_tree=nil):Ppas_tree;
@@ -630,6 +640,7 @@ var newtypeindex:SizeUInt=0;
 {Setting the output file type}
     species:byte=0;
     codename:string='';
+    plizefunc:boolean=false;
 {Setting the global searching}
     glopastree:Ppas_tree=nil;
 
@@ -7734,8 +7745,32 @@ begin
   end;
  convert_c_param_to_pas_param:=res;
 end;
+function converter_get_main_bracket_number(const str:c_string):SizeInt;
+var i,j,layer,layer2,count:SizeInt;
+begin
+ i:=1; count:=0; layer:=0;
+ while(i<=str.count)do
+  begin
+   if(str.item[i-1]='__attribute__') then
+    begin
+     j:=i+1; layer2:=0;
+     while(j<=str.count)do
+      begin
+       if(str.item[j-1]='(') then inc(layer2);
+       if(str.item[j-1]=')') then dec(layer2);
+       inc(j);
+      end;
+     i:=j+1; continue;
+    end;
+   if(str.item[i-1]='(') then inc(layer);
+   if(str.item[i-1]=')') then dec(layer);
+   if(layer=0) and (str.item[i-1]=')') then inc(count);
+   inc(i);
+  end;
+ converter_get_main_bracket_number:=count;
+end;
 function convert_c_func_pointer_to_pas_func_pointer(const cfuncp:c_string;istype:boolean=false):pas_temp;
-var i,j,k,m,n,count,layer,layer2,layer3:SizeInt;
+var i,j,k,m,n,l,count,layer,layer2,layer3:SizeInt;
     func,tempfunc:cov_func;
     bool,defbool,enterfunc:boolean;
     covtype:cov_type;
@@ -7743,16 +7778,18 @@ var i,j,k,m,n,count,layer,layer2,layer3:SizeInt;
     paramindex:SizeInt=0;
     tempstr,tempstr2,tempstr3,tempstr4,tempstr6:string;
     defvalue:c_string;
-    tempfuncp,tempcstr1,tempcstr2,tempcstr3,tempcstr4:c_string;
+    tempfuncp,tempcstr1,tempcstr2,tempcstr3,tempcstr4,tempcstr5,tempcstr6:c_string;
     res,tempres:pas_temp;
 begin
  i:=1; res.temptypecount:=0; count:=0;
  tempfuncp:=cfuncp; res.exp.count:=0;
  i:=1; j:=0; k:=1; m:=1; layer:=0; defbool:=false;
  func.abi:='cdecl'; func.alias:=''; func.isasm:=false;
- func.isinline:=false; func.resulttype:=''; func.name:=''; func.conv:='';
+ func.isinline:=false; func.resulttype:='';
+ func.name:=''; func.conv:=''; func.layer:=0;
  tempfunc.abi:='cdecl'; tempfunc.alias:=''; tempfunc.isasm:=false;
- tempfunc.isinline:=false; tempfunc.resulttype:=''; tempfunc.name:=''; tempfunc.conv:='';
+ tempfunc.isinline:=false; tempfunc.resulttype:='';
+ tempfunc.name:=''; tempfunc.conv:=''; tempfunc.layer:=0;
  while(i<=tempfuncp.count)do
   begin
    if(tempfuncp.item[i-1]='(') and (j=0) then
@@ -7777,6 +7814,14 @@ begin
     begin
      c_string_delete_item(tempfuncp,i,1); continue;
     end
+   else if(layer=0) and (tempfuncp.item[i-1]='ATTRIBUTE_NONNULL') then
+    begin
+     c_string_delete_item(tempfuncp,i,1); continue;
+    end
+   else if(layer=0) and (tempfuncp.item[i-1]='ATTRIBUTE_NORETURN') then
+    begin
+     c_string_delete_item(tempfuncp,i,1); continue;
+    end
    else if(layer=0) and (tempfuncp.item[i-1]='inline') then
     begin
      func.isinline:=true; c_string_delete_item(tempfuncp,i,1); continue;
@@ -7785,7 +7830,7 @@ begin
     begin
      func.abi:='efiapi'; c_string_delete_item(tempfuncp,i,1); continue;
     end
-   else if(layer=0) and (tempfuncp.item[i-1]='cdecl') then
+   else if(layer=0) and (tempfuncp.item[i-1]='__cdecl') then
     begin
      func.conv:='cdecl'; c_string_delete_item(tempfuncp,i,1); continue;
     end
@@ -7822,7 +7867,7 @@ begin
        if(tempfuncp.item[j-1]=',') and (layer2=2) then
         begin
          tempcstr4:=c_string_copy_item(tempfuncp,n,j-n);
-         if(tempcstr4.item[0]='alias') then
+         if(tempcstr4.item[0]='alias') or (tempcstr4.item[0]='__alias__') then
           begin
            func.alias:=tempcstr4.item[2];
           end
@@ -7839,7 +7884,7 @@ begin
        else if(tempfuncp.item[j-1]=')') and (layer=2) then
         begin
          tempcstr4:=c_string_copy_item(tempfuncp,n,j-n);
-         if(tempcstr4.item[0]='alias') then
+         if(tempcstr4.item[0]='alias') or (tempcstr4.item[0]='__alias__') then
           begin
            func.alias:=tempcstr4.item[2];
           end
@@ -7903,132 +7948,279 @@ begin
  i:=1; m:=1; n:=1; count:=0; layer:=0; layer2:=0; bool:=false;
  func.count:=0; tempfunc.count:=0;
  covarr.arrc:=0;
- while(i<=tempcstr1.count)do
+ while(i<=tempcstr1.count) do
   begin
-   if(tempcstr1.item[i-1]='(') then inc(layer);
-   if(tempcstr1.item[i-1]=')') then dec(layer);
-   if(layer>0) then bool:=true;
-   if(bool=true) then
+   if(tempcstr1.item[i-1]='__asm') then
     begin
-     j:=i+1; layer2:=layer;
-     if(tempfunc.name='') then
+     func.isasm:=true; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='inline') then
+    begin
+     func.isinline:=true; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='ATTRIBUTE_NONNULL') then
+    begin
+     c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='ATTRIBUTE_NORETURN') then
+    begin
+     c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='EFIAPI') then
+    begin
+     func.abi:='efiapi'; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='WINAPI') then
+    begin
+     func.abi:='winapi'; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='__cdecl') then
+    begin
+     func.conv:='cdecl'; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='__pascal') then
+    begin
+     func.conv:='pascal'; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='__stdcall') then
+    begin
+     func.conv:='stdcall'; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='__fastcall') then
+    begin
+     func.conv:='fastcall'; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='__thiscall') then
+    begin
+     func.conv:='thiscall'; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='__attribute__') then
+    begin
+     j:=i+1; k:=i+3;
+     while(j<=tempcstr1.count)do
       begin
-       while(j<=tempcstr1.count)do
+       if(tempcstr1.item[j-1]='(') then inc(layer2);
+       if(tempcstr1.item[j-1]=')') then dec(layer2);
+       if(layer2=2) and (tempcstr1.item[j-1]=',') then
         begin
-         if(tempcstr1.item[j-1]='(') then
+         tempcstr4:=c_string_copy_item(tempcstr1,k,j-k);
+         if(tempcstr4.item[0]='__alias__') or (tempcstr4.item[0]='alias') then
           begin
-           inc(layer2); dec(count);
+           func.alias:=tempcstr4.item[2];
           end
-         else if(layer2=layer) and (tempcstr1.item[j-1]=')') then break
-         else if(tempcstr1.item[j-1]=')') then dec(layer2)
-         else if(tempcstr1.item[j-1]='*') then inc(count)
-         else if(tempfunc.name='') then
+         else if(tempcstr4.item[0]='__ms_abi__') or (tempcstr4.item[0]='ms_abi') then
           begin
-           tempfunc.name:=tempcstr1.item[j-1]; inc(j,2); m:=j+1;
-           layer3:=0;
-           while(j<=tempcstr1.count)do
-            begin
-             if(tempcstr1.item[j-1]='(') then inc(layer3);
-             if(tempcstr1.item[j-1]=')') then dec(layer3);
-             if((layer3=1) and (tempcstr1.item[j-1]=',')) or
-             ((layer3=0) and (tempcstr1.item[j-1]=')')) then
-              begin
-               tempcstr3:=c_string_copy_item(tempcstr1,m,j-m);
-               if(c_string_check_function_pointer(tempcstr3)) then
-                begin
-                 tempres:=convert_c_func_pointer_to_pas_func_pointer(tempcstr3);
-                 n:=1;
-                 while(n<=tempres.temptypecount)do
-                  begin
-                   inc(res.temptypecount);
-                   SetLength(res.temptype,res.temptypecount);
-                   res.temptype[res.temptypecount-1]:=tempres.temptype[n-1];
-                   inc(n);
-                  end;
-                 inc(tempfunc.count);
-                 SetLength(tempfunc.param,tempfunc.count);
-                 tempfunc.param[tempfunc.count-1]:=tempres.exp;
-                end
-               else
-                begin
-                 tempres:=convert_c_param_to_pas_param(tempcstr3);
-                 n:=1;
-                 while(n<=tempres.temptypecount)do
-                  begin
-                   inc(res.temptypecount);
-                   SetLength(res.temptype,res.temptypecount);
-                   res.temptype[res.temptypecount-1]:=tempres.temptype[n-1];
-                   inc(n);
-                  end;
-                  inc(tempfunc.count);
-                  SetLength(tempfunc.param,tempfunc.count);
-                  tempfunc.param[tempfunc.count-1]:=tempres.exp;
-                 end;
-                if(layer3=0) and (tempcstr1.item[j-1]=')') then break;
-               end;
-              inc(j);
-             end;
-           end;
-         inc(j);
-        end;
-       i:=j+1;
-      end
-     else
-      begin
-       layer3:=0; m:=j+1; inc(j);
-       while(j<=tempcstr1.count)do
+           func.abi:='ms_abi_default';
+          end
+         else if(tempcstr4.item[0]='__sysv_abi__') or (tempcstr4.item[0]='sysv_abi') then
+          begin
+           func.abi:='sysv_abi_default';
+          end;
+         k:=j+1;
+        end
+       else if(layer2=1) and (tempcstr1.item[j-1]=')') then
         begin
-         if(tempcstr1.item[j-1]='(') then inc(layer3);
-         if(tempcstr1.item[j-1]=')') then dec(layer3);
-         if((layer3=1) and (tempcstr1.item[j-1]=',')) or
-         ((layer3=0) and (tempcstr1.item[j-1]=')')) then
+         tempcstr4:=c_string_copy_item(tempcstr1,k,j-k);
+         if(tempcstr4.item[0]='__alias__') or (tempcstr4.item[0]='alias') then
           begin
-            tempcstr3:=c_string_copy_item(tempcstr1,m,j-m);
-            if(c_string_check_function_pointer(tempcstr3)) then
-             begin
-              tempres:=convert_c_func_pointer_to_pas_func_pointer(tempcstr3);
-              n:=1;
-              while(n<=tempres.temptypecount)do
-               begin
-                inc(res.temptypecount);
-                SetLength(res.temptype,res.temptypecount);
-                res.temptype[res.temptypecount-1]:=tempres.temptype[n-1];
-                inc(n);
-               end;
-              inc(tempfunc.count);
-              SetLength(tempfunc.param,tempfunc.count);
-              tempfunc.param[tempfunc.count-1]:=tempres.exp;
-              m:=j+1;
-             end
-            else
-             begin
-              tempres:=convert_c_param_to_pas_param(tempcstr3);
-              n:=1;
-              while(n<=tempres.temptypecount)do
-               begin
-                inc(res.temptypecount);
-                SetLength(res.temptype,res.temptypecount);
-                res.temptype[res.temptypecount-1]:=tempres.temptype[n-1];
-                inc(n);
-               end;
-              inc(tempfunc.count);
-              SetLength(tempfunc.param,tempfunc.count);
-              tempfunc.param[tempfunc.count-1]:=tempres.exp;
-             end;
-            if(layer3=0) and (tempcstr1.item[j-1]=')') then break;
-           end;
-         inc(j);
+           func.alias:=tempcstr4.item[2];
+          end
+         else if(tempcstr4.item[0]='__ms_abi__') or (tempcstr4.item[0]='ms_abi') then
+          begin
+           func.abi:='ms_abi_default';
+          end
+         else if(tempcstr4.item[0]='__sysv_abi__') or (tempcstr4.item[0]='sysv_abi') then
+          begin
+           func.abi:='sysv_abi_default';
+          end;
+         inc(j); break;
         end;
-       i:=j+1;
+       inc(j);
+      end;
+     c_string_delete_item(tempcstr1,i,j-i+1); continue;
+    end;
+   if(tempcstr1.item[i-1]='(') then
+    begin
+     inc(layer);
+     if(layer=1) then l:=i+1;
+    end
+   else if(tempcstr1.item[i-1]=')') then dec(layer);
+   if(layer=0) and (tempcstr1.item[i-1]=')') then
+    begin
+     j:=i+1; tempcstr3:=c_string_copy_item(tempcstr1,l,i-l);
+     c_string_delete_item(tempcstr1,l-1,i-l+1);
+     repeat
+      begin
+       k:=converter_get_main_bracket_number(tempcstr3);
+       if(k>=2) then break
+       else if(k=1) then
+        begin
+         m:=1; n:=1; layer2:=0; count:=0;
+         while(m<=tempcstr1.count) do
+          begin
+           if(tempcstr1.item[m-1]='*') then
+            begin
+             n:=m; inc(count);
+            end
+           else if(tempcstr1.item[m-1]='(') then inc(layer2)
+           else if(tempcstr1.item[m-1]=')') then dec(layer2);
+           if(layer2=0) then break;
+           inc(m);
+          end;
+         tempfunc.layer:=tempfunc.layer+count-1;
+         tempcstr3:=c_string_copy_item(tempcstr3,n+1,m-n-1);
+        end;
+      end;
+     until(k>=2);
+     m:=1; layer2:=0;
+     while(m<=tempcstr3.count)do
+      begin
+       if(tempcstr3.item[m-1]='(') then inc(layer2);
+       if(tempcstr3.item[m-1]=')') then inc(layer2);
+       if(layer2=0) then break;
+       inc(m);
+      end;
+     tempcstr4:=c_string_copy_item(tempcstr3,2,m-2);
+     tempcstr5:=c_string_copy_item(tempcstr3,m+2,tempcstr3.count-m-2);
+     j:=1; k:=1; layer2:=0; count:=0;
+     while(j<=tempcstr4.count)do
+      begin
+       if(tempcstr4.item[j-1]='*') then
+        begin
+         inc(count); c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='__asm') then
+        begin
+         tempfunc.isasm:=true; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='WINAPI') then
+        begin
+         tempfunc.abi:='winapi'; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='__cdecl') then
+        begin
+         tempfunc.conv:='cdecl'; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='__pascal') then
+        begin
+         tempfunc.conv:='pascal'; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='__stdcall') then
+        begin
+         tempfunc.conv:='stdcall'; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='__fastcall') then
+        begin
+         tempfunc.conv:='fastcall'; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='__thiscall') then
+        begin
+         tempfunc.conv:='thiscall'; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='inline') then
+        begin
+         tempfunc.isinline:=true; c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='ATTRIBUTE_NORETURN') then
+        begin
+         c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='ATTRIBUTE_NONNULL') then
+        begin
+         c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(tempcstr4.item[j-1]='__attribute__') then
+        begin
+         m:=j+1; n:=j+3; layer3:=0;
+         while(m<=tempcstr4.count)do
+          begin
+           if(tempcstr4.item[m-1]='(') then inc(layer3);
+           if(tempcstr4.item[m-1]=')') then dec(layer3);
+           if((layer3=2) and (tempcstr4.item[m-1]=',')) or
+           ((layer3=1) and (tempcstr4.item[m-1]=')')) then
+            begin
+             tempcstr5:=c_string_copy_item(tempcstr4,n,m-n);
+             if(tempcstr5.item[0]='alias') or (tempcstr5.item[0]='__alias__') then
+              begin
+               tempfunc.alias:=tempcstr5.item[2];
+              end
+             else if(tempcstr5.item[0]='__ms_abi__') or (tempcstr5.item[0]='ms_abi') then
+              begin
+               tempfunc.abi:='ms_abi_default';
+              end
+             else if(tempcstr5.item[0]='__sysv_abi__') or (tempcstr5.item[0]='sysv_abi') then
+              begin
+               tempfunc.abi:='sysv_abi_default';
+              end;
+             if(layer3=1) then
+              begin
+               inc(m); break;
+              end
+             else n:=m+1;
+            end;
+           inc(m);
+          end;
+         c_string_delete_item(tempcstr4,j,m-j+1); continue;
+        end
+       else if(count>=1) and (tempfunc.name='') then
+        begin
+         tempfunc.name:=tempcstr4.item[j-1];
+         c_string_delete_item(tempcstr4,j,1); continue;
+        end
+       else if(count=0) then
+        begin
+         c_string_delete_item(tempcstr4,j,1); continue;
+        end;
+       inc(j);
+      end;
+     tempfunc.layer:=tempfunc.layer+count-1;
+     j:=1; k:=1; layer2:=0;
+     while(j<=tempcstr5.count)do
+      begin
+       if(tempcstr5.item[j-1]='(') then inc(layer2);
+       if(tempcstr5.item[j-1]=')') then dec(layer2);
+       if((layer2=0) and (tempcstr5.item[j-1]=',')) or (j=tempcstr5.count) then
+        begin
+         if(j=tempcstr5.count) then tempcstr6:=c_string_copy_item(tempcstr5,k,j-k+1)
+         else tempcstr6:=c_string_copy_item(tempcstr5,k,j-k);
+         if(c_string_check_function_pointer(tempcstr6)) then
+          begin
+           tempres:=convert_c_func_pointer_to_pas_func_pointer(tempcstr6,false);
+           for m:=1 to tempres.temptypecount do
+            begin
+             inc(res.temptypecount);
+             SetLength(res.temptype,res.temptypecount);
+             res.temptype[res.temptypecount-1]:=tempres.temptype[m-1];
+            end;
+           inc(tempfunc.count);
+           SetLength(tempfunc.param,tempfunc.count);
+           tempfunc.param[tempfunc.count-1]:=tempres.exp;
+          end
+         else
+          begin
+           tempres:=convert_c_param_to_pas_param(tempcstr6);
+           for m:=1 to tempres.temptypecount do
+            begin
+             inc(res.temptypecount);
+             SetLength(res.temptype,res.temptypecount);
+             res.temptype[res.temptypecount-1]:=tempres.temptype[m-1];
+            end;
+           inc(tempfunc.count);
+           SetLength(tempfunc.param,tempfunc.count);
+           tempfunc.param[tempfunc.count-1]:=tempres.exp;
+          end;
+         k:=j+1;
+        end;
+       inc(j);
       end;
     end
-   else
+   else if(count>0) and (tempcstr1.item[i-1]<>'*') and (func.name='') then
     begin
-     if(tempcstr1.item[i-1]='*') then inc(count)
-     else if(func.name='') and (tempfunc.name='') then
-      begin
-       func.name:=tempcstr1.item[i-1];
-      end;
+     func.name:=tempcstr1.item[i-1]; c_string_delete_item(tempcstr1,i,1); continue;
+    end
+   else if(tempcstr1.item[i-1]='*') then
+    begin
+     inc(func.layer); c_string_delete_item(tempcstr1,i,1); continue;
     end;
    if(layer=0) and (tempcstr1.item[i-1]='[') then
     begin
@@ -8045,9 +8237,9 @@ begin
      covarr.arrd[covarr.arrc-1]:=c_string_copy_item(tempcstr1,i+1,j-i-1);
      c_string_delete_item(tempcstr1,i,j-i+1);
     end;
-   if(layer=0) and (tempcstr1.item[i-1]<>'*') then break;
    inc(i);
   end;
+ if(func.layer>0) then dec(func.layer);
  i:=1; layer:=0;
  while(i<=tempcstr2.count)do
   begin
@@ -8091,6 +8283,8 @@ begin
     end;
    inc(i);
   end;
+ func.alias:=convert_c_string_to_pas_string(func.alias);
+ tempfunc.alias:=convert_c_string_to_pas_string(tempfunc.alias);
  i:=1;
  if(istype) then
   begin
@@ -8131,6 +8325,8 @@ begin
      if(func.abi<>'') then tempstr2:=tempstr2+func.abi+';';
      if(func.isinline) then tempstr2:=tempstr2+'inline;';
      if(func.conv<>'') then tempstr2:=tempstr2+func.conv+';';
+     if(func.isasm) then tempstr2:=tempstr2+'assembler;';
+     if(func.alias<>'') then tempstr2:=tempstr2+'[alias:'+func.alias+'];';
      tempstr3:='func'+IntToStr(newfuncindex);
      inc(res.temptypecount);
      SetLength(res.temptype,res.temptypecount);
@@ -8181,6 +8377,8 @@ begin
      if(tempfunc.abi<>'') then tempstr6:=tempstr6+tempfunc.abi+';';
      if(tempfunc.isinline) then tempstr6:=tempstr6+'inline;';
      if(tempfunc.conv<>'') then tempstr6:=tempstr6+tempfunc.conv+';';
+     if(tempfunc.isasm) then tempstr2:=tempstr2+'assembler;';
+     if(tempfunc.alias<>'') then tempstr6:=tempstr6+'[alias:'+tempfunc.alias+'];';
      inc(res.temptypecount);
      SetLength(res.temptype,res.temptypecount);
      res.temptype[res.temptypecount-1].newname:=tempfunc.name;
@@ -8241,6 +8439,8 @@ begin
      if(func.abi<>'') then tempstr2:=tempstr2+func.abi+';';
      if(func.isinline) then tempstr2:=tempstr2+'inline;';
      if(func.conv<>'') then tempstr2:=tempstr2+func.conv+';';
+     if(func.isasm) then tempstr2:=tempstr2+'assembler;';
+     if(func.alias<>'') then tempstr2:=tempstr2+'[alias:'+func.alias+'];';
      tempstr3:=func.name;
      inc(res.temptypecount);
      SetLength(res.temptype,res.temptypecount);
@@ -8313,6 +8513,8 @@ begin
      if(func.abi<>'') then tempstr2:=tempstr2+func.abi+';';
      if(func.isinline) then tempstr2:=tempstr2+'inline;';
      if(func.conv<>'') then tempstr2:=tempstr2+func.conv+';';
+     if(func.isasm) then tempstr2:=tempstr2+'assembler;';
+     if(func.alias<>'') then tempstr2:=tempstr2+'[alias:'+func.alias+'];';
      tempstr3:='func'+IntToStr(newfuncindex);
      inc(res.temptypecount);
      SetLength(res.temptype,res.temptypecount);
@@ -8363,6 +8565,8 @@ begin
      if(tempfunc.abi<>'') then tempstr6:=tempstr6+tempfunc.abi+';';
      if(tempfunc.isinline) then tempstr6:=tempstr6+'inline;';
      if(tempfunc.conv<>'') then tempstr6:=tempstr6+tempfunc.conv+';';
+     if(tempfunc.isasm) then tempstr2:=tempstr2+'assembler;';
+     if(tempfunc.alias<>'') then tempstr6:=tempstr6+'[alias:'+tempfunc.alias+'];';
      inc(res.temptypecount);
      SetLength(res.temptype,res.temptypecount);
      tempstr3:='func'+IntTostr(newfuncindex);
@@ -8429,6 +8633,8 @@ begin
      if(func.abi<>'') then tempstr2:=tempstr2+func.abi+';';
      if(func.isinline) then tempstr2:=tempstr2+'inline;';
      if(func.conv<>'') then tempstr2:=tempstr2+func.conv+';';
+     if(func.isasm) then tempstr2:=tempstr2+'assembler;';
+     if(func.alias<>'') then tempstr2:=tempstr2+'[alias:'+func.alias+'];';
      tempstr3:='func'+IntToStr(newfuncindex);
      inc(res.temptypecount);
      SetLength(res.temptype,res.temptypecount);
@@ -8473,6 +8679,125 @@ begin
    c_string_insert_string(defvalue,res.exp,res.exp.count+1);
   end;
  convert_c_func_pointer_to_pas_func_pointer:=res;
+end;
+procedure convert_c_func_to_pas_func(var cexp:c_string);
+var param:cov_func_param;
+    i,j,k,layer:SizeInt;
+    tempcstr:c_string;
+begin
+ i:=1;
+ while(i<=cexp.count)do
+  begin
+   if(i<cexp.count) and (c_string_is_operator(cexp.item[i-1],true)=0)
+   and (c_string_is_bracket_string(cexp.item[i-1])=false) and (cexp.item[i]='(') then
+    begin
+     param.funcname:=cexp.item[i-1]; param.count:=0;
+     j:=i+2; k:=i+2; layer:=1;
+     while(j<=cexp.count)do
+      begin
+       if(cexp.item[j-1]='(') then inc(layer);
+       if(cexp.item[j-1]=')') then dec(layer);
+       if((layer=1) and (cexp.item[j-1]=',')) or ((layer=0) and (cexp.item[j-1]=')')) then
+        begin
+         inc(param.count);
+         SetLength(param.param,param.count);
+         param.param[param.count-1]:=c_string_copy_item(cexp,k,j-k);
+         if(layer=0) and (cexp.item[j-1]=')') then
+          begin
+           inc(j); continue;
+          end
+         else k:=j+1;
+        end;
+       inc(j);
+      end;
+     c_string_delete_item(cexp,i,j-i+1);
+    if(param.funcname='malloc') then
+     begin
+      tempcstr:=c_string_generate_from_string('GetMem()',true);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='calloc') then
+     begin
+      tempcstr:=c_string_generate_from_string('AllocMem(*)',true);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='realloc') then
+     begin
+      tempcstr:=c_string_generate_from_string('ReallocMem(,)',true);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='free') then
+     begin
+      tempcstr:=c_string_generate_from_string('FreeMem()',true);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='memset') then
+     begin
+      tempcstr:=c_string_generate_from_string('FillChar(^,,)',true);
+      c_string_insert_string(param.param[1],tempcstr,6);
+      c_string_insert_string(param.param[2],tempcstr,5);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='memcpy') then
+     begin
+      tempcstr:=c_string_generate_from_string('Move(^,^,)',true);
+      c_string_insert_string(param.param[2],tempcstr,7);
+      c_string_insert_string(param.param[0],tempcstr,5);
+      c_string_insert_string(param.param[1],tempcstr,3);
+     end
+    else if(param.funcname='memmove') then
+     begin
+      tempcstr:=c_string_generate_from_string('Move(^,^,)',true);
+      c_string_insert_string(param.param[2],tempcstr,7);
+      c_string_insert_string(param.param[0],tempcstr,5);
+      c_string_insert_string(param.param[1],tempcstr,3);
+     end
+    else if(param.funcname='strcpy') then
+     begin
+      tempcstr:=c_string_generate_from_string('StrCopy(,)',true);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='strncpy') then
+     begin
+      tempcstr:=c_string_generate_from_string('StrLCopy(,,)',true);
+      c_string_insert_string(param.param[2],tempcstr,5);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='strcat') then
+     begin
+      tempcstr:=c_string_generate_from_string('StrCat(,)',true);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='strncat') then
+     begin
+      tempcstr:=c_string_generate_from_string('StrLCat(,,)',true);
+      c_string_insert_string(param.param[2],tempcstr,5);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='strcmp') then
+     begin
+      tempcstr:=c_string_generate_from_string('StrComp(,)',true);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='memcmp') then
+     begin
+      tempcstr:=c_string_generate_from_string('CompareByte(^,^,)',true);
+      c_string_insert_string(param.param[2],tempcstr,7);
+      c_string_insert_string(param.param[1],tempcstr,5);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end;
+    c_string_insert_string(tempcstr,cexp,i);
+    inc(i); continue;
+   end;
+  inc(i);
+ end;
 end;
 function convert_c_expression_to_pas_expression(const cexp:c_string;handlebrac:boolean=true):pas_temp;
 var i,j,k,m,n,l,layer,layer2:SizeInt;
@@ -9732,6 +10057,7 @@ begin
    inc(i);
   end;
  res.exp:=tempexp;
+ if(plizefunc=true) then convert_c_func_to_pas_func(res.exp);
  c_string_delete_unnecessary_bracket(res.exp);
  convert_c_expression_to_pas_expression:=res;
 end;
@@ -11803,7 +12129,8 @@ begin
    (Pc_include(orgtree^.content)^.incname.item[0]<>'cstdio') and
    (Pc_include(orgtree^.content)^.incname.item[0]<>'cstdlib') and
    (Pc_include(orgtree^.content)^.incname.item[0]<>'cstring') and
-   (Pc_include(orgtree^.content)^.incname.item[0]<>'locale') then
+   (Pc_include(orgtree^.content)^.incname.item[0]<>'locale') and
+   (Pc_include(orgtree^.content)^.incname.item[0]<>'iostream') then
     begin
      New(usesstate);
      usesstate^.usesname:=Pc_include(orgtree^.content)^.incname.item[0];

@@ -2,10 +2,10 @@ program c2pas;
 
 uses prehandler,fileutil,sysutils,classes,converter;
 
-function c2pas_convert(inputname:string;includepath:array of string;outputtype:byte;
-outputname:string;needreference:boolean;debug:boolean):string;
+procedure c2pas_convert(inputname:string;includepath:array of string;outputtype:byte;
+outputname:string;needreference:boolean;debug:boolean;plize:boolean);
 var ii,jj,kk:SizeInt;
-    tempstr,tempstr2,tempstr3:string;
+    tempstr:string;
     source,totallist,partlist:TStringList;
     content:string;
     ctree:Pc_tree;
@@ -13,7 +13,7 @@ var ii,jj,kk:SizeInt;
     reffile,pasfile:Text;
 begin
  {Loading the include file searching path}
- ii:=1;
+ ii:=1; plizefunc:=plize;
  totallist:=TStringList.Create;
  while(ii<=length(includepath))do
   begin
@@ -103,6 +103,7 @@ var i,j:SizeInt;
     p4:string='';
     p5:boolean=false;
     p6:boolean=false;
+    p7:boolean=false;
     total:SizeInt;
 label label1,label2,label3,label4;
 begin
@@ -238,6 +239,10 @@ begin
          readln; exit;
         end;
       end
+     else if(Copy(tempstr,1,2)='-p') or (Copy(tempstr,1,2)='-p') then
+      begin
+       p7:=true;
+      end
      else
       begin
        writeln('ERROR:Unknown command:'+ParamStr(i));
@@ -255,7 +260,7 @@ begin
      writeln('no output file name,use out.pas as default.');
      readln; exit;
     end;
-   c2pas_convert(p1,p2,p3,p4,p5,p6);
+   c2pas_convert(p1,p2,p3,p4,p5,p6,p7);
   end
  else if(ParamCount=1) then
   begin
@@ -285,9 +290,11 @@ begin
      writeln('         -d/-D means debug mode switch(On is open,off is close)(must be only one).');
      writeln('         -d/-D<On/Off>');
      writeln('         Example:-d/-DOn');
-     writeln('         -h/-H means you need the help manual for this program(must be only one)');
+     writeln('         -h/-H means you need the help manual for this program(must be only one).');
      writeln('         Example:-h/-H');
-     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit');
+     writeln('         -p/-P means enable pascalize standard function(Default is disabled).');
+     writeln('         Example:-p/-P');
+     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P');
      writeln('         You can press enter to exit the help manual.');
      readln;
     end
@@ -318,9 +325,11 @@ begin
      writeln('         -d/-D means debug mode switch(On is open,off is close)(must be only one).');
      writeln('         -d/-D<On/Off>');
      writeln('         Example:-d/-DOn');
-     writeln('         -h/-H means you need the help manual for this program(must be only one)');
+     writeln('         -h/-H means you need the help manual for this program(must be only one).');
      writeln('         Example:-h/-H');
-     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit');
+     writeln('         -p/-P means enable pascalize standard function(Default is disabled).');
+     writeln('         Example:-p/-P');
+     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P');
      writeln('         You can press enter to exit the help manual.');
      readln;
     end;
@@ -356,9 +365,11 @@ begin
      writeln('         -d/-D means debug mode switch(On is open,off is close)(must be only one).');
      writeln('         -d/-D<On/Off>');
      writeln('         Example:-d/-DOn');
-     writeln('         -h/-H means you need the help manual for this program(must be only one)');
+     writeln('         -h/-H means you need the help manual for this program(must be only one).');
      writeln('         Example:-h/-H');
-     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit');
+     writeln('         -p/-P means enable pascalize standard function(Default is disabled).');
+     writeln('         Example:-p/-P');
+     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P');
      readln; exit;
     end;
    writeln('Input the include path number:');
@@ -451,9 +462,12 @@ begin
    else
     begin
      writeln('ERROR:unknown switch mode '+tempstr+'.');
-     goto label3;
+     goto label4;
     end;
-   c2pas_convert(p1,p2,p3,p4,p5,p6);
+   writeln('Do you want to pascalize the standard function(Input y/yes to enable,other is disable)?');
+   readln(tempstr);
+   if(LowerCase(tempstr)='yes') or (LowerCase(tempstr)='y') then p7:=true else p7:=false;
+   c2pas_convert(p1,p2,p3,p4,p5,p6,p7);
   end;
 end.
 
