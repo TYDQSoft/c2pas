@@ -132,6 +132,8 @@ type c_string=packed record
               structsec:array of string;
               varname:array of c_string;
               varcount:SizeInt;
+              varhavevalue:array of boolean;
+              varvalue:array of c_string;
               end;
      Pc_struct=^c_struct;
      c_member=packed record
@@ -154,6 +156,8 @@ type c_string=packed record
             enumalign:array of string;
             varname:array of c_string;
             varcount:SizeInt;
+            varhavevalue:array of boolean;
+            varvalue:array of c_string;
             end;
      Pc_enum=^c_enum;
      c_if_statement=packed record
@@ -1586,10 +1590,10 @@ function c_string_convert_integer(const str:string):SizeInt;
 const hexc1:string='0123456789ABCDEF';
       hexc2:string='0123456789abcdef';
 var i,j,res:SizeInt;
-    ishex:boolean;
+    ishex,isbin:boolean;
     isneg:boolean;
 begin
- i:=1; isneg:=false; res:=0; ishex:=false;
+ i:=1; isneg:=false; res:=0; ishex:=false; isbin:=false; isneg:=false;
  if(Copy(str,1,3)='-0x') or (Copy(str,1,3)='-0X') then
   begin
    ishex:=true; isneg:=true; i:=4;
@@ -1598,9 +1602,17 @@ begin
   begin
    ishex:=true; isneg:=false; i:=3;
   end
+ else if(Copy(str,1,3)='-0b') or (Copy(str,1,3)='-0B') then
+  begin
+   isbin:=true; isneg:=true; i:=4;
+  end
+ else if(Copy(str,1,2)='0b') or (Copy(str,1,2)='0B') then
+  begin
+   isbin:=true; isneg:=false; i:=3;
+  end
  else if(length(str)>=1) and (str[1]='-') then
   begin
-   ishex:=false; isneg:=true; i:=2;
+   isbin:=false; ishex:=false; isneg:=true; i:=2;
   end
  else if(length(str)<=0) then
   begin
@@ -1618,6 +1630,10 @@ begin
        inc(j);
       end;
      if(j<=16) then res:=res*16+j-1 else exit(-1);
+    end
+   else if(isbin=true) then
+    begin
+     res:=res*2+Byte(str[i])-Byte('0');
     end
    else if(str[i]>='0') and (str[i]<='9') then
     begin
@@ -5500,6 +5516,7 @@ begin
        else tempcstr:=c_string_copy_item(extcode,j,i-j);
        inc(structstate^.varcount);
        SetLength(structstate^.varname,structstate^.varcount);
+       SetLength(structstate^.varvalue,structstate^.varcount);
        SetLength(structstate^.structalign,structstate^.varcount);
        SetLength(structstate^.structat,structstate^.varcount);
        SetLength(structstate^.structsec,structstate^.varcount);
@@ -5561,7 +5578,26 @@ begin
           end;
          inc(k);
         end;
-       structstate^.varname[structstate^.varcount-1]:=tempcstr;
+       m:=1;
+       while(m<=tempcstr.count)do
+        begin
+         if(tempcstr.item[m-1]='=') then break;
+         inc(m);
+        end;
+       if(m<=tempcstr.count) then
+        begin
+         structstate^.varname[structstate^.varcount-1]:=
+         c_string_copy_item(tempcstr,1,m-1);
+         structstate^.varhavevalue[structstate^.varcount-1]:=true;
+         structstate^.varvalue[structstate^.varcount-1]:=
+         c_string_copy_item(tempcstr,m+1,tempcstr.count-m);
+        end
+       else
+        begin
+         structstate^.varname[structstate^.varcount-1]:=tempcstr;
+         structstate^.varhavevalue[structstate^.varcount-1]:=false;
+         structstate^.varvalue[structstate^.varcount-1].count:=0;
+        end;
       end;
      inc(i);
     end;
@@ -5798,7 +5834,26 @@ begin
           end;
          inc(k);
         end;
-       enumstate^.varname[enumstate^.varcount-1]:=tempcstr;
+       m:=1;
+       while(m<=tempcstr.count)do
+        begin
+         if(tempcstr.item[m-1]='=') then break;
+         inc(m);
+        end;
+       if(m<=tempcstr.count) then
+        begin
+         enumstate^.varname[enumstate^.varcount-1]:=
+         c_string_copy_item(tempcstr,1,m-1);
+         enumstate^.varhavevalue[enumstate^.varcount-1]:=true;
+         enumstate^.varvalue[enumstate^.varcount-1]:=
+         c_string_copy_item(tempcstr,m+1,tempcstr.count-m);
+        end
+       else
+        begin
+         enumstate^.varname[enumstate^.varcount-1]:=tempcstr;
+         enumstate^.varhavevalue[enumstate^.varcount-1]:=false;
+         enumstate^.varvalue[enumstate^.varcount-1].count:=0;
+        end;
       end;
      inc(i);
     end;
@@ -8830,7 +8885,7 @@ begin
   inc(i);
  end;
 end;
-function convert_c_expression_to_pas_expression(const cexp:c_string;handlebrac:boolean=true):pas_temp;
+function convert_c_expression_to_pas_expression(const cexp:c_string):pas_temp;
 var i,j,k,m,n,l,layer,layer2:SizeInt;
     tempexp,tempcstr,tempcstr1,tempcstr2,tempcstr3:c_string;
     tempstr,tempstr2:string;
@@ -9580,7 +9635,7 @@ begin
       begin
        tempcstr1:=c_string_copy_item(tempexp,i+1,k-i);
        tempcstr2:=c_string_generate_from_string('inc()',true);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1,true);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
        m:=1;
        while(m<=tempres.temptypecount) do
         begin
@@ -9610,7 +9665,7 @@ begin
      else if(k-i<=0) then
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1,true);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
        tempcstr2:=c_string_generate_from_string('inc()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9641,7 +9696,7 @@ begin
      else
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1,true);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
        tempcstr2:=c_string_generate_from_string('inc()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9722,7 +9777,7 @@ begin
       begin
        tempcstr1:=c_string_copy_item(tempexp,i+1,k-i);
        tempcstr2:=c_string_generate_from_string('dec()',true);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1,true);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
        m:=1;
        while(m<=tempres.temptypecount) do
         begin
@@ -9752,7 +9807,7 @@ begin
      else if(k-i<=0) then
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1,true);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
        tempcstr2:=c_string_generate_from_string('dec()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9783,7 +9838,7 @@ begin
      else
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1,true);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
        tempcstr2:=c_string_generate_from_string('dec()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9994,12 +10049,16 @@ begin
        c_string_insert_item('@',tempexp,i);
       end;
     end
+   else if(tempexp.item[i-1]='/') then
+    begin
+
+    end
    else if(tempexp.item[i-1]='*') then
     begin
      if(i>1) and (i<tempexp.count) and (c_string_is_operator(tempexp.item[i-2],true)=0)
      and (c_string_is_operator(tempexp.item[i],true)=0) and
-     (c_string_is_bracket_string(tempexp.item[i-2])) and
-     (c_string_is_bracket_string(tempexp.item[i])) then
+     (c_string_is_bracket_string(tempexp.item[i-2])=false) and
+     (c_string_is_bracket_string(tempexp.item[i])=false) then
       begin
        inc(i); continue;
       end
@@ -10195,10 +10254,9 @@ begin
     end;
    inc(i);
   end;
- writeln('Max layer:',maxlayer);
  if(maxlayer=0) then
   begin
-   value:=convert_c_expression_to_pas_expression(value,true).exp;
+   value:=convert_c_expression_to_pas_expression(value).exp;
    res.arrc:=0;
    if(value.count=1) and (Copy(value.item[0],1,1)=#39) then
     begin
@@ -10289,7 +10347,6 @@ begin
    inc(i);
   end;
  l1:
- writeln('Node Count:',pastree^.count);
  i:=pastree^.count;
  while(i>=1)do
   begin
@@ -10542,7 +10599,7 @@ begin
   end
  else
   begin
-   res:=convert_c_expression_to_pas_expression(cstate,true);
+   res:=convert_c_expression_to_pas_expression(cstate);
   end;
  convert_c_statement_to_pas_statement:=res;
 end;
@@ -10659,7 +10716,7 @@ begin
    tempcstr3:=c_string_generate_from_string('(==)',false);
    c_string_insert_string(tempcstr2,tempcstr3,3);
    c_string_insert_string(tempcstr,tempcstr3,2);
-   ifstate^.condition:=convert_c_expression_to_pas_expression(tempcstr3,true).exp;
+   ifstate^.condition:=convert_c_expression_to_pas_expression(tempcstr3).exp;
    pas_tree_add_item(res,pas_node_if_statement,ifstate,false);
    convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
   end
@@ -10846,7 +10903,38 @@ begin
           end;
          inc(j);
         end;
-       varstate^.varhavevalue:=false;
+       varstate^.varhavevalue:=Pc_enum(orgtree^.content)^.varhavevalue[i-1];
+       if(varstate^.varhavevalue) then
+        begin
+         varstate^.varvalue:=Pc_enum(orgtree^.content)^.varvalue[i-1];
+         covarr:=convert_c_value_to_pas_value(glopastree,tempstr,varstate^.vararrayc,varstate^.varvalue);
+         for n:=1 to varstate^.vararrayc do
+          begin
+           if(varstate^.vararrayd[n-1].Count=0) then
+            begin
+             varstate^.vararrayd[n-1]:=c_string_generate_from_string(
+             '0..'+IntToStr(covarr.arrd[n-1]-1),true);
+            end
+           else
+            begin
+             tempstr6:=c_string_to_string(varstate^.vararrayd[n-1]);
+             tempnum:=c_string_convert_integer(tempstr6);
+             if(tempnum=-1) then
+              begin
+               varstate^.vararrayd[n-1]:=c_string_generate_from_string('0..0',true);
+              end
+             else
+              begin
+               varstate^.vararrayd[n-1]:=
+               c_string_generate_from_string('0..'+IntToStr(tempnum-1),true);
+              end;
+            end;
+          end;
+        end
+       else
+        begin
+         varstate^.varvalue.count:=0;
+        end;
        pas_tree_add_item(res,pas_node_variable,varstate,false);
       end
      else
@@ -10898,7 +10986,7 @@ begin
   end
  else if(orgtree^.treetype=c_node_expression) then
   begin
-   temppas:=convert_c_expression_to_pas_expression(Pc_expression(orgtree^.content)^.content,true);
+   temppas:=convert_c_expression_to_pas_expression(Pc_expression(orgtree^.content)^.content);
    i:=1;
    while(i<=temppas.temptypecount) do
     begin
@@ -12022,7 +12110,7 @@ begin
   end
  else if(orgtree^.treetype=c_node_if_statement) then
   begin
-   temppas:=convert_c_expression_to_pas_expression(Pc_if_statement(orgtree^.content)^.condition,true);
+   temppas:=convert_c_expression_to_pas_expression(Pc_if_statement(orgtree^.content)^.condition);
    i:=1;
    while(i<=temppas.temptypecount) do
     begin
@@ -12087,7 +12175,7 @@ begin
      expstate^.content:=temppas.exp;
      pas_tree_add_item(res,pas_node_expression,expstate,false);
      temppas:=convert_c_expression_to_pas_expression(
-     Pc_loop_statement(orgtree^.content)^.condition,true);
+     Pc_loop_statement(orgtree^.content)^.condition);
      New(loopstate);
      loopstate^.condition:=temppas.exp;
      c_string_delete_unnecessary_bracket(loopstate^.condition);
@@ -12119,7 +12207,7 @@ begin
        inc(i);
       end;
      temppas:=convert_c_expression_to_pas_expression(
-     Pc_loop_statement(orgtree^.content)^.step,true);
+     Pc_loop_statement(orgtree^.content)^.step);
      tempres:=res^.child+res^.count-1; i:=1;
      while(i<=temppas.temptypecount) do
       begin
@@ -12148,7 +12236,7 @@ begin
    else
     begin
      temppas:=convert_c_expression_to_pas_expression(
-     Pc_loop_statement(orgtree^.content)^.condition,true);
+     Pc_loop_statement(orgtree^.content)^.condition);
      i:=1;
      while(i<=temppas.temptypecount) do
       begin
@@ -12211,7 +12299,7 @@ begin
   end
  else if(orgtree^.treetype=c_node_return) then
   begin
-   temppas:=convert_c_expression_to_pas_expression(Pc_return(orgtree^.content)^.retvalue,true);
+   temppas:=convert_c_expression_to_pas_expression(Pc_return(orgtree^.content)^.retvalue);
    i:=1;
    while(i<=temppas.temptypecount) do
     begin
@@ -12369,7 +12457,38 @@ begin
           end;
          inc(j);
         end;
-       varstate^.varhavevalue:=false;
+       varstate^.varhavevalue:=Pc_struct(orgtree^.content)^.varhavevalue[i-1];
+       if(varstate^.varhavevalue) then
+        begin
+         varstate^.varvalue:=Pc_struct(orgtree^.content)^.varvalue[i-1];
+         covarr:=convert_c_value_to_pas_value(glopastree,tempstr,varstate^.vararrayc,varstate^.varvalue);
+         for n:=1 to varstate^.vararrayc do
+          begin
+           if(varstate^.vararrayd[n-1].Count=0) then
+            begin
+             varstate^.vararrayd[n-1]:=c_string_generate_from_string(
+             '0..'+IntToStr(covarr.arrd[n-1]-1),true);
+            end
+           else
+            begin
+             tempstr6:=c_string_to_string(varstate^.vararrayd[n-1]);
+             tempnum:=c_string_convert_integer(tempstr6);
+             if(tempnum=-1) then
+              begin
+               varstate^.vararrayd[n-1]:=c_string_generate_from_string('0..0',true);
+              end
+             else
+              begin
+               varstate^.vararrayd[n-1]:=
+               c_string_generate_from_string('0..'+IntToStr(tempnum-1),true);
+              end;
+            end;
+          end;
+        end
+       else
+        begin
+         varstate^.varvalue.count:=0;
+        end;
        pas_tree_add_item(res,pas_node_variable,varstate,false);
       end
      else
@@ -12441,6 +12560,7 @@ begin
        varstate^.varname:=temppas.exp.item[0];
        varstate^.vartype:=temppas.exp.item[2];
        varstate^.vararrayc:=0;
+       varstate^.varext:=false;
        varstate^.varhavevalue:=Pc_statement(orgtree^.content)^.varbool[i-1];
        if(varstate^.varhavevalue) then
         begin
@@ -12490,28 +12610,39 @@ begin
        varstate^.varname:=tempcstr.item[j-1];
        varstate^.vartype:=tempstr;
        varstate^.vararrayc:=0;
+       varstate^.varext:=false;
        inc(j); k:=j; layer:=0;
        while(j<=tempcstr.count)do
         begin
          if(tempcstr.item[j-1]='[') then inc(layer);
          if(tempcstr.item[j-1]=']') then dec(layer);
-         if(layer=0) then
+         if(layer=0) and (tempcstr.item[j-1]=']') then
           begin
            inc(varstate^.vararrayc);
            SetLength(varstate^.vararrayd,varstate^.vararrayc);
-           varstate^.vararrayd[varstate^.vararrayc-1]:=c_string_copy_item(tempcstr,j+1,k-j-1);
-           if(varstate^.vararrayd[varstate^.vararrayc-1].count>0) then
+           tempcstr:=c_string_copy_item(tempcstr,k+1,j-k-1);
+           tempstr:=c_string_to_string(tempcstr);
+           tempnum:=c_string_convert_integer(tempstr);
+           if(tempnum=-1) then
             begin
-             tempcstr3:=c_string_generate_from_string('0..',true);
-             c_string_insert_item('-',tempcstr3,3);
-             c_string_insert_item('1',tempcstr3,4);
-             c_string_insert_string(varstate^.vararrayd[varstate^.vararrayc-1],tempcstr3,3);
-             varstate^.vararrayd[varstate^.vararrayc-1]:=tempcstr3;
+             if(varstate^.vararrayd[varstate^.vararrayc-1].count>0) then
+              begin
+               tempcstr3:=c_string_generate_from_string('0..',true);
+               c_string_insert_item('-',tempcstr3,3);
+               c_string_insert_item('1',tempcstr3,4);
+               c_string_insert_string(varstate^.vararrayd[varstate^.vararrayc-1],tempcstr3,3);
+               varstate^.vararrayd[varstate^.vararrayc-1]:=tempcstr3;
+              end
+             else
+              begin
+               varstate^.vararrayd[varstate^.vararrayc-1]:=
+               c_string_generate_from_string('0..0',true);
+              end;
             end
            else
             begin
              varstate^.vararrayd[varstate^.vararrayc-1]:=
-             c_string_generate_from_string('0..0',true);
+             c_string_generate_from_string('0..'+IntToStr(tempnum-1),true);
             end;
            k:=j+1;
           end;
@@ -12975,14 +13106,24 @@ begin
  if(srctree=nil) then exit;
  i:=1; len:=srctree^.count;
  if(desttree=nil) then desttree:=initialize_pas_tree;
- if(srctree^.count>0) and (spec=0) then
+ if(srctree^.count>0) and (spec<>1) and (spec<>3) then
   begin
    desttree^.count:=0;
    desttree^.child:=nil;
    for i:=1 to srctree^.count do
     begin
      temptree:=srctree^.child+i-1;
-     if((Pointer_vaild(temptree^.content)=false) or (temptree^.treetype=pas_node_none)) then continue;
+     if(Pointer_vaild(temptree^.content)=false) or (temptree^.treetype=pas_node_none) then continue;
+     if(spec=2) then
+      begin
+       if(temptree^.treetype=pas_node_variable) or (temptree^.treetype=pas_node_const) or
+       (temptree^.treetype=pas_node_enum) or (temptree^.treetype=pas_node_record) or
+       (temptree^.treetype=pas_node_class) or (temptree^.treetype=pas_node_enum) or
+       (temptree^.treetype=pas_node_uses) or (temptree^.treetype=pas_node_label_declare)
+       or (temptree^.treetype=pas_node_class_function)
+       or (temptree^.treetype=pas_node_function) or (temptree^.treetype=pas_node_operator) then
+       continue;
+      end;
      inc(desttree^.count);
      ReallocMem(desttree^.child,desttree^.count*sizeof(pas_tree));
      tempdestree:=desttree^.child+desttree^.count-1;
@@ -12992,7 +13133,7 @@ begin
      tempdestree^.content:=nil;
      tempdestree^.child:=nil;
      tempdestree^.count:=0;
-     pas_tree_copy(temptree,tempdestree);
+     pas_tree_copy(temptree,tempdestree,spec);
     end;
   end
  else
@@ -13003,12 +13144,16 @@ begin
  if(srctree^.treetype<>pas_node_root) and (Pointer_vaild(srctree^.content)=false) then
   begin
    desttree^.treetype:=pas_node_none;
-   desttree^.part:=srctree^.part;
+   if(spec<2) then desttree^.part:=srctree^.part
+   else if(spec=2) then desttree^.part:=true
+   else desttree^.part:=false;
    desttree^.content:=nil;
    exit;
   end;
  desttree^.treetype:=srctree^.treetype;
- desttree^.part:=srctree^.part;
+ if(spec<2) then desttree^.part:=srctree^.part
+ else if(spec=2) then desttree^.part:=true
+ else desttree^.part:=false;
  if(srctree^.treetype=pas_node_root) then
   begin
    desttree^.treetype:=pas_node_root;
@@ -13749,6 +13894,17 @@ begin
       end
      else if(specindex=8) then
       begin
+       if(basetree^.treetype=pas_node_variable)
+       or (basetree^.treetype=pas_node_const) or
+       (basetree^.treetype=pas_node_enum)
+       or (basetree^.treetype=pas_node_record) or
+       (basetree^.treetype=pas_node_class)
+       or (basetree^.treetype=pas_node_enum) or
+       (basetree^.treetype=pas_node_uses)
+       or (basetree^.treetype=pas_node_label_declare)
+       or (basetree^.treetype=pas_node_class_function)
+       or (basetree^.treetype=pas_node_function)
+       or (basetree^.treetype=pas_node_operator) then continue;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13852,6 +14008,20 @@ begin
    inc(i);
   end;
 end;
+procedure fix_pas_tree(pastree:Ppas_tree);
+var i:SizeInt;
+    temptree:Ppas_tree;
+begin
+ i:=1;
+ if(pastree=nil) then
+  begin
+
+  end
+ else
+  begin
+
+  end;
+end;
 procedure pas_tree_reconstruct(const orgtree:Ppas_tree;var desttree:Ppas_tree);
 var tempdeflist,tempuseslist,tempreclist,tempconstlist,tempvarlist,tempfuncdlist:pas_tree_list;
     templabellist,tempfunclist,tempcodeseglist:pas_tree_list;
@@ -13892,7 +14062,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(tempdeflist.tree[i-1],temptree);
+     pas_tree_copy(tempdeflist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to tempdeflist.count do
@@ -13905,7 +14075,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(tempuseslist.tree[i-1],temptree);
+     pas_tree_copy(tempuseslist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to tempuseslist.count do
@@ -13918,7 +14088,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(tempreclist.tree[i-1],temptree);
+     pas_tree_copy(tempreclist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to tempreclist.count do
@@ -13931,7 +14101,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(tempconstlist.tree[i-1],temptree);
+     pas_tree_copy(tempconstlist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to tempconstlist.count do
@@ -13944,7 +14114,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(tempvarlist.tree[i-1],temptree);
+     pas_tree_copy(tempvarlist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to tempvarlist.count do
@@ -13957,7 +14127,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(templabellist.tree[i-1],temptree);
+     pas_tree_copy(templabellist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to templabellist.count do
@@ -13965,7 +14135,7 @@ begin
      destruct_pas_tree(templabellist.tree[i-1]);
     end;
    {Handle the function declartion}
-   if(species=0) then
+   if(species=1) then
     begin
      for i:=1 to tempfuncdlist.count do
       begin
@@ -13976,7 +14146,7 @@ begin
        temptree^.treetype:=tempfuncdlist.tree[i-1]^.treetype;
        temptree^.child:=nil;
        temptree^.count:=0;
-       pas_tree_copy(tempfuncdlist.tree[i-1],temptree);
+       pas_tree_copy(tempfuncdlist.tree[i-1],temptree,3);
        temptree^.part:=false;
       end;
     end;
@@ -13999,8 +14169,7 @@ begin
      and(tempfunclist.tree[i-1]^.count>0) then
      pas_tree_reconstruct(tempfunclist.tree[i-1],temptree)
      else
-     pas_tree_copy(tempfunclist.tree[i-1],temptree);
-     temptree:=res^.child+res^.count-1;
+     pas_tree_copy(tempfunclist.tree[i-1],temptree,1);
      temptree^.part:=true;
     end;
    for i:=1 to tempfunclist.count do
@@ -14014,6 +14183,7 @@ begin
   begin
    res:=desttree;
    pas_tree_copy(orgtree,res,1);
+   res^.part:=true;
    {Handle the const}
    pas_tree_get_list(orgtree,tempconstlist,3);
    tempconstlist.count:=length(tempconstlist.tree);
@@ -14037,7 +14207,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(tempvarlist.tree[i-1],temptree);
+     pas_tree_copy(tempvarlist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to length(tempvarlist.tree) do
@@ -14052,7 +14222,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(templabellist.tree[i-1],temptree);
+     pas_tree_copy(templabellist.tree[i-1],temptree,3);
      temptree^.part:=false;
     end;
    for i:=1 to length(templabellist.tree) do
@@ -14068,7 +14238,7 @@ begin
      inc(res^.count);
      ReallocMem(res^.child,res^.count*sizeof(pas_tree));
      temptree:=res^.child+res^.count-1;
-     pas_tree_copy(tempcodeseglist.tree[i-1],temptree);
+     pas_tree_copy(tempcodeseglist.tree[i-1],temptree,2);
      temptree^.part:=true;
     end;
    for i:=1 to tempcodeseglist.count do
@@ -14208,20 +14378,6 @@ begin
  if(i>pastree^.count) then res:=nil else res:=pastree^.child+i-1;
  pas_tree_get_next_tree:=res;
 end;
-procedure output_pas_tree(basetree:Ppas_tree);
-var i,j:SizeInt;
-begin
- writeln('Node:');
- for i:=1 to basetree^.count do
-  begin
-   if((basetree^.child+i-1)^.treetype=pas_node_type) then
-    begin
-     writeln(basetree^.treetype);
-     writeln(Ppas_type((basetree^.child+i-1)^.content)^.newname);
-     c_string_write(Ppas_type((basetree^.child+i-1)^.content)^.oldname); writeln;
-    end;
-  end;
-end;
 function convert_pas_tree_to_string(pastree:Ppas_tree;blankcount:SizeInt=0):string;
 var i,ii,ii2,ii3,len:SizeInt;
     tempstr:string;
@@ -14258,14 +14414,6 @@ begin
   begin
  temptree:=pastree^.child+ii-1;
  if(Pointer_vaild(temptree^.content)=false) then continue;
- if(pastree^.treetype=pas_node_class_function) or (pastree^.treetype=pas_node_function)
- or(pastree^.treetype=pas_node_operator) then
-  begin
-   if(codeseg=false) and (temptree^.part=true) then
-    begin
-     res:=res+generate_blank_string(blankcount)+'begin'#10; codeseg:=true;
-    end;
-  end;
  if(temptree^.treetype=pas_node_function) or (temptree^.treetype=pas_node_operator) then
   begin
    if(pastree^.treetype<>pas_node_root) then continue;
@@ -14288,6 +14436,14 @@ begin
    if(pastree^.treetype<>pas_node_root) and (pastree^.treetype<>pas_node_function)
    and (pastree^.treetype<>pas_node_class_function)
    and (pastree^.treetype<>pas_node_operator) then continue;
+  end;
+ if(pastree^.treetype=pas_node_class_function) or (pastree^.treetype=pas_node_function)
+ or(pastree^.treetype=pas_node_operator) then
+  begin
+   if(codeseg=false) and (temptree^.part=true) then
+    begin
+     res:=res+generate_blank_string(blankcount)+'begin'#10; codeseg:=true;
+    end;
   end;
  if(temptree^.treetype=pas_node_type) then
   begin
@@ -14484,7 +14640,7 @@ begin
      res:=res+'[alias:'+Ppas_class_function(temptree^.content)^.funcalias+'];';
      res:=res+#10;
     end;
-   res:=res+convert_pas_tree_to_string(temptree,blankcount);
+   res:=res+convert_pas_tree_to_string(temptree,blankcount+1);
   end
  else if(temptree^.treetype=pas_node_class_tag) then
   begin
@@ -14591,7 +14747,7 @@ begin
      res:=res+'[alias:'+Ppas_function(temptree^.content)^.funcalias+'];';
      res:=res+#10;
     end;
-   res:=res+convert_pas_tree_to_string(temptree,blankcount);
+   res:=res+convert_pas_tree_to_string(temptree,blankcount+1);
   end
  else if(temptree^.treetype=pas_node_goto_or_label) then
   begin
@@ -14700,14 +14856,14 @@ begin
    res:=res+generate_blank_string(blankcount);
    if(Ppas_loop_statement(temptree^.content)^.looptype=1) then
     begin
-     res:='while('+c_string_to_string(Ppas_loop_statement(temptree^.content)^.condition)+')do'#10;
+     res:=res+'while('+c_string_to_string(Ppas_loop_statement(temptree^.content)^.condition)+')do'#10;
      res:=res+generate_blank_string(blankcount+1)+'begin'#10;
      res:=res+convert_pas_tree_to_string(temptree,blankcount+2);
      res:=res+generate_blank_string(blankcount+1)+'end;'#10;
     end
    else if(Ppas_loop_statement(temptree^.content)^.looptype=2) then
     begin
-     res:='repeat'#10;
+     res:=res+'repeat'#10;
      res:=res+generate_blank_string(blankcount+1)+'begin'#10;
      res:=res+convert_pas_tree_to_string(temptree,blankcount+2);
      res:=res+generate_blank_string(blankcount+1)+'end;'#10;
@@ -14764,7 +14920,7 @@ begin
    if(Ppas_operator(temptree^.content)^.isinline) then
    tempstr:=tempstr+'inline;';
    res:=res+tempstr+#10;
-   res:=res+convert_pas_tree_to_string(pastree,blankcount+1);
+   res:=res+convert_pas_tree_to_string(pastree,blankcount);
   end
  else if(temptree^.treetype=pas_node_record) and (pastree^.treetype=pas_node_root) then
   begin
@@ -14776,9 +14932,6 @@ begin
    tempstr:='type '+Ppas_record(temptree^.content)^.recordname+'='
    else tempstr:='     '+Ppas_record(temptree^.content)^.recordname+'=';
    len:=length(tempstr);
-   for ii2:=1 to temptree^.count do
-    begin
-    end;
    if(Ppas_record(temptree^.content)^.recordtype=0) then
    res:=res+generate_blank_string(blankcount)+tempstr+'record'#10
    else if(Ppas_record(temptree^.content)^.recordtype=1)
@@ -14792,8 +14945,7 @@ begin
  else if(temptree^.treetype=pas_node_return) then
   begin
    res:=res+generate_blank_string(blankcount);
-   res:=res+Ppas_return(temptree^.content)^.funcname+':='+
-   c_string_to_string(Ppas_return(temptree^.content)^.retvalue)+';'#10;
+   res:=res+'exit('+c_string_to_string(Ppas_return(temptree^.content)^.retvalue)+');'#10;
   end
  else if(temptree^.treetype=pas_node_uses) then
   begin
@@ -14810,7 +14962,7 @@ begin
     end;
    if(temptree3=nil) or ((temptree3<>nil) and (temptree3^.treetype<>pas_node_uses)) then
     begin
-     res:=res+';';
+     res:=res+';'#10;
     end
    else
     begin
@@ -14881,7 +15033,7 @@ begin
     end;
   end;
  end;
- if(pastree^.treetype=pas_node_root) and (species=1) then
+ if(pastree^.treetype=pas_node_root) and (species=0) then
   begin
    res:=res+'begin'#10;
    res:=res+'end.'#10;
