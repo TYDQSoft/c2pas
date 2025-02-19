@@ -32,12 +32,13 @@ const c_node_none=0;
       c_node_asm_code=25;
       c_node_class_tag=26;
       c_node_namespace=27;
-      c_node_template=28;
-      c_node_extern_c=29;
-      c_node_operator=30;
-      c_node_using_namespace=31;
-      c_node_unhandled=32;
-      c_node_root=33;
+      c_node_extern_c=28;
+      c_node_operator=29;
+      c_node_using_namespace=30;
+      c_node_lambda_expression=31;
+      c_node_constexpr_function=32;
+      c_node_unhandled=33;
+      c_node_root=34;
       c_node_if_if=0;
       c_node_if_elseif=1;
       c_node_if_else=2;
@@ -101,7 +102,7 @@ type c_string=packed record
               count:SizeInt;
               end;
      c_string_list=packed record
-                   item:c_string;
+                   item:array of c_string;
                    count:SizeInt;
                    end;
      c_expression=packed record
@@ -109,6 +110,10 @@ type c_string=packed record
                   end;
      Pc_expression=^c_expression;
      c_statement=packed record
+                 generichave:boolean;
+                 genericname:string;
+                 genericitem:array of c_string;
+                 genericcount:SizeInt;
                  isstatic:boolean;
                  statetype:string;
                  varname:array of c_string;
@@ -121,6 +126,11 @@ type c_string=packed record
                  end;
      Pc_statement=^c_statement;
      c_struct=packed record
+              generichave:boolean;
+              genericitem:array of c_string;
+              genericspec:array of c_string;
+              genericspeccount:SizeInt;
+              genericcount:SizeInt;
               pack:byte;
               align:string;
               section:string;
@@ -197,6 +207,11 @@ type c_string=packed record
               end;
      Pc_define=^c_define;
      c_function=packed record
+                generichave:boolean;
+                genericitem:array of c_string;
+                genericspec:array of c_string;
+                genericspeccount:SizeInt;
+                genericcount:SizeInt;
                 funcalias:string;
                 funcstatic:boolean;
                 funcsec:string;
@@ -210,9 +225,15 @@ type c_string=packed record
                 paramcount:SizeInt;
                 resulttype:string;
                 isasm:boolean;
-                isconstexpr:boolean;
                 end;
      Pc_function=^c_function;
+     c_constexpr_function=packed record
+                          funcname:string;
+                          funcparam:array of c_string;
+                          funccount:SizeInt;
+                          functype:string;
+                          end;
+     Pc_constexpr_function=^c_constexpr_function;
      c_ifdef=packed record
              deftype:byte;
              condition:c_string;
@@ -267,14 +288,22 @@ type c_string=packed record
      c_class_member=packed record
                     memisstatic:boolean;
                     membername:array of c_string;
+                    memberhavevalue:array of boolean;
+                    membervalue:array of c_string;
                     membertype:string;
                     memberbit:array of byte;
                     membercount:SizeInt;
                     end;
      Pc_class_member=^c_class_member;
      c_class_function=packed record
+                      generichave:boolean;
+                      genericitem:array of c_string;
+                      genericspec:array of c_string;
+                      genericspeccount:SizeInt;
+                      genericcount:SizeInt;
+                      funchaveinit:boolean;
+                      funcinit:c_string;
                       funcalias:string;
-                      isconstexpr:boolean;
                       isstatic:boolean;
                       isconstructor:boolean;
                       isdestructor:boolean;
@@ -283,8 +312,6 @@ type c_string=packed record
                       isoverride:boolean;
                       isabstract:boolean;
                       funcname:string;
-                      gclassbool:boolean;
-                      gclassname:c_string;
                       funcinline:boolean;
                       funcalign:string;
                       funcsec:string;
@@ -302,6 +329,11 @@ type c_string=packed record
                  end;
      Pc_class_tag=^c_class_tag;
      c_class=packed record
+             generichave:boolean;
+             genericitem:array of c_string;
+             genericcount:SizeInt;
+             genericspec:array of c_string;
+             genericspeccount:SizeInt;
              inheritclass:array of string;
              inheritbyte:array of byte;
              inheritcount:SizeInt;
@@ -312,11 +344,6 @@ type c_string=packed record
                  spacename:string;
                  end;
      Pc_namespace=^c_namespace;
-     c_template=packed record
-                tlcontent:array of c_string;
-                tlcount:SizeInt;
-                end;
-     Pc_template=^c_template;
      c_goto_or_label=packed record
                      islabel:boolean;
                      name:string;
@@ -331,6 +358,11 @@ type c_string=packed record
                 end;
      Pc_asm_code=^c_asm_code;
      c_operator=packed record
+                generichave:boolean;
+                genericitem:array of c_string;
+                genericcount:SizeInt;
+                genericspec:array of c_string;
+                genericspeccount:SizeInt;
                 opealias:string;
                 isoverride:boolean;
                 isstatic:boolean;
@@ -352,6 +384,15 @@ type c_string=packed record
                        namespace:string;
                        end;
      Pc_using_namespace=^c_using_namespace;
+     c_lambda_expression=packed record
+                         funcname:string;
+                         captureitem:array of c_string;
+                         capturecount:SizeInt;
+                         parameteritem:array of c_string;
+                         parametercount:SizeInt;
+                         rettype:string;
+                         end;
+     Pc_lambda_expression=^c_lambda_expression;
      c_unhandled=packed record
                  content:c_string;
                  end;
@@ -374,6 +415,7 @@ type c_string=packed record
                     end;
      Ppas_expression=^pas_expression;
      pas_variable=packed record
+                  varspec:boolean;
                   varname:string;
                   vartype:string;
                   vararrayd:array of c_string;
@@ -401,6 +443,9 @@ type c_string=packed record
                 end;
      Ppas_member=^pas_member;
      pas_record=packed record
+                isgeneric:boolean;
+                generictype:array of string;
+                genericcount:SizeInt;
                 recordname:string;
                 recordtype:byte;
                 recordunion:boolean;
@@ -418,6 +463,11 @@ type c_string=packed record
               end;
      Ppas_enum=^pas_enum;
      pas_function=packed record
+                  islambda:boolean;
+                  paramcaptureindex:SizeInt;
+                  isgeneric:boolean;
+                  generictype:array of string;
+                  genericcount:SizeInt;
                   funcname:string;
                   param:array of c_string;
                   paramcount:SizeInt;
@@ -432,6 +482,9 @@ type c_string=packed record
                   end;
      Ppas_function=^pas_function;
      pas_class_function=packed record
+                        isgeneric:boolean;
+                        generictype:array of string;
+                        genericcount:SizeInt;
                         hostname:string;
                         funcname:string;
                         param:array of c_string;
@@ -452,6 +505,9 @@ type c_string=packed record
                         end;
      Ppas_class_function=^pas_class_function;
      pas_operator=packed record
+                  isgeneric:boolean;
+                  generictype:array of string;
+                  genericcount:SizeInt;
                   signname:string;
                   param:array of c_string;
                   paramcount:SizeInt;
@@ -525,6 +581,9 @@ type c_string=packed record
               end;
      Ppas_uses=^pas_uses;
      pas_class=packed record
+               isgeneric:boolean;
+               generictype:array of string;
+               genericcount:SizeInt;
                inheritclass:array of string;
                inheritcount:byte;
                classname:string;
@@ -625,6 +684,10 @@ type c_string=packed record
                     param:array of c_string;
                     count:SizeInt;
                     end;
+     cov_pos_list=packed record
+                  item:array of SizeInt;
+                  count:SizeInt;
+                  end;
 
 function construct_c_tree(content:string):Pc_tree;
 function convert_c_tree_to_pas_tree(ctree:Pc_tree;pastree:Ppas_tree=nil):Ppas_tree;
@@ -664,14 +727,9 @@ begin
  if(i>length(content)) or (i<=0) then tydq_get_character:=#0 else tydq_get_character:=content[i];
 end;
 function c_string_divide_type_and_name(exp:c_string;specindex:byte=0):SizeInt;
-var j:SizeInt;
+var j,layer:SizeInt;
 begin
- if(exp.count>=3) and (exp.item[1]='::') then
-  begin
-   j:=4;
-   if(specindex=0) then while(j<=exp.count) and (exp.item[j-1]='*') do inc(j);
-  end
- else if(exp.count>=3) and ((exp.item[0]='unsigned') or (exp.item[0]='signed'))
+ if(exp.count>=3) and ((exp.item[0]='unsigned') or (exp.item[0]='signed'))
  and (exp.item[1]='long') and (exp.item[2]='long') and (exp.item[3]='int') then
   begin
    j:=5;
@@ -700,18 +758,62 @@ begin
    j:=3;
    if(specindex=0) then while(j<=exp.count) and (exp.item[j-1]='*') do inc(j);
   end
- else if(exp.count>=2) and (exp.item[0]='struct') or (exp.item[0]='union') or (exp.item[0]='enum') then
+ else if(exp.count>=2) and (exp.item[0]='enum') then
   begin
    j:=3;
    if(specindex=0) then while(j<=exp.count) and (exp.item[j-1]='*') do inc(j);
   end
+ else if(exp.count>=2) and (exp.item[0]='struct') or (exp.item[0]='union') then
+  begin
+   j:=2; layer:=0;
+   while(j<=exp.count) do
+    begin
+     if(exp.item[j-1]='<') then inc(layer);
+     if(exp.item[j-1]='>') then dec(layer);
+     if(layer>1) and (exp.item[j-1]='>>') then dec(layer,2);
+     if(layer=0) then
+      begin
+       inc(j); break;
+      end;
+     inc(j);
+    end;
+   if(specindex=0) then while(j<=exp.count) and (exp.item[j-1]='*') do inc(j);
+  end
+ else if(exp.count>=2) and (exp.item[0]='class') then
+  begin
+   j:=2; layer:=0;
+   while(j<=exp.count)do
+    begin
+     if(exp.item[j-1]='<') then inc(layer);
+     if(exp.item[j-1]='>') then dec(layer);
+     if(layer>1) and (exp.item[j-1]='>>') then dec(layer,2);
+     if(layer=0) and (exp.item[j-1]='::') then
+      begin
+       inc(j,2); break;
+      end;
+     inc(j);
+    end;
+   if(specindex=0) then while(j<=exp.count) and (exp.item[j-1]='*') do inc(j);
+  end
  else
   begin;
-   j:=2;
+   j:=2; layer:=0;
+   while(j<=exp.count)do
+    begin
+     if(exp.item[j-1]='<') then inc(layer);
+     if(exp.item[j-1]='>') then dec(layer);
+     if(layer>1) and (exp.item[j-1]='>>') then dec(layer,2);
+     if(layer=0) and (exp.item[j-1]='::') then
+      begin
+       inc(j,2); break;
+      end;
+     inc(j);
+    end;
    if(specindex=0) then while(j<=exp.count) and (exp.item[j-1]='*') do inc(j);
   end;
  dec(j);
  if(j<=exp.count) and (exp.item[j-1]='(') then dec(j);
+ if(j<exp.count) and (exp.item[j]='=') then dec(j);
  c_string_divide_type_and_name:=j;
 end;
 procedure c_string_insert_item(const content:string;var str:c_string;const insindex:SizeInt);
@@ -884,6 +986,10 @@ begin
  if(copy(str,i,2)='0x') or (copy(str,i,2)='0X') then
   begin
    inc(i,2); ishex:=true;
+  end
+ else if(copy(str,i,2)='0b') or (copy(str,i,2)='0B') then
+  begin
+   inc(i,2);
   end;
  while(i<=len)do
   begin
@@ -1026,11 +1132,13 @@ begin
        j:=i+1;
        while(j<=len) do
         begin
-         if(j>i+3) and (tydq_get_character(str,j-3)<>'\') and (tydq_get_character(str,j-2)='\') and (tydq_get_character(str,j-1)='\')
+         if(j>i+3) and (tydq_get_character(str,j-3)<>'\') and (tydq_get_character(str,j-2)='\')
+         and (tydq_get_character(str,j-1)='\')
          and (tydq_get_character(str,i)=tydq_get_character(str,j)) then break
          else if(j>i+2) and (tydq_get_character(str,j-2)='\') and (tydq_get_character(str,j-1)='\')
          and (tydq_get_character(str,i)=tydq_get_character(str,j)) then break
-         else if(j>i+1) and (tydq_get_character(str,j-1)<>'\') and (tydq_get_character(str,i)=tydq_get_character(str,j)) then break
+         else if(j>i+1) and (tydq_get_character(str,j-1)<>'\')
+         and (tydq_get_character(str,i)=tydq_get_character(str,j)) then break
          else if(j=i+1) and (tydq_get_character(str,i)=tydq_get_character(str,j)) then break;
          inc(j);
         end;
@@ -1323,7 +1431,7 @@ begin
   end;
  c_string_to_string:=res;
 end;
-function c_string_delete_unnecessary_bracket(var code:c_string):SizeInt;
+function c_string_delete_unnecessary_bracket(var code:c_string;pas:boolean=false):SizeInt;
 var i,j:SizeInt;
     stack:cov_stack;
     res:SizeInt;
@@ -1347,32 +1455,44 @@ begin
        if(stack.right[j-1]=0) then break;
        dec(j);
       end;
-     if(j>0) then stack.right[j-1]:=i else break;
+     if(j>0) then stack.right[j-1]:=i else code.item[i-1]:='';
     end;
    inc(i);
   end;
  i:=1;
  while(i<=stack.count)do
   begin
-   if(stack.left[i-1]>1) and (code.item[stack.left[i-1]-2]='__attribute__') then
+   if(stack.left[i-1]>1) and (code.item[stack.left[i-1]-2]='__attribute__') and (pas=false) then
     begin
      inc(i); continue;
     end
-   else if(stack.left[i-1]>2) and (code.item[stack.left[i-1]-3]='__attribute__') then
+   else if(stack.left[i-1]>2) and (code.item[stack.left[i-1]-3]='__attribute__') and (pas=false) then
     begin
      inc(i); continue;
     end
-   else if(stack.left[i-1]>1) and (c_string_is_operator(code.item[stack.left[i-1]-2])=0)
+   else if(stack.left[i-1]>1) and (c_string_is_operator(code.item[stack.left[i-1]-2],pas)=0)
    and (c_string_is_bracket_string(code.item[stack.left[i-1]-2])=false) then
     begin
      inc(i); continue;
     end
    else if(stack.left[i-1]>1) and ((code.item[stack.left[i-1]-2]='!')
-   or (code.item[stack.left[i-1]-2]='~')) then
+   or (code.item[stack.left[i-1]-2]='~') or (code.item[stack.left[i-1]-2]='>')) then
     begin
      inc(i); continue;
     end;
    if(i<stack.count) and (stack.left[i-1]+1=stack.left[i]) and (stack.right[i-1]-1=stack.right[i]) then
+    begin
+     code.item[stack.left[i-1]-1]:='';
+     code.item[stack.right[i-1]-1]:='';
+    end
+   else if(stack.left[i-1]=1) and (stack.right[i-1]<code.count) and
+   (code.item[stack.right[i-1]]<>'^') and (pas=true) then
+    begin
+     code.item[stack.left[i-1]-1]:='';
+     code.item[stack.right[i-1]-1]:='';
+    end
+   else if(stack.left[i-1]>1) and (stack.right[i-1]=code.count) and
+   (code.item[stack.left[i-1]-2]<>'*') and (pas=false) then
     begin
      code.item[stack.left[i-1]-1]:='';
      code.item[stack.right[i-1]-1]:='';
@@ -1435,6 +1555,57 @@ begin
   end;
  if(i>code.count) then c_string_search_for_keyword:=0 else c_string_search_for_keyword:=i;
 end;
+function c_string_detect_class(const code:c_string):boolean;
+var i,layer:SizeInt;
+begin
+ i:=1; layer:=0;
+ while(i<=code.count)do
+  begin
+   if(code.item[i-1]='<') then inc(layer);
+   if(code.item[i-1]='>') then dec(layer);
+   if(layer=0) and (code.item[i-1]='class') then exit(true);
+   if(layer=0) and ((c_string_is_operator(code.item[i-1])>0) or
+   (c_string_is_bracket_string(code.item[i-1])=true))
+   and (code.item[i-1]<>':') then exit(false);
+   inc(i);
+  end;
+ c_string_detect_class:=false;
+end;
+function c_string_detect_lambda(const code:c_string):boolean;
+var i,layer,count:SizeInt;
+    bool:boolean;
+begin
+ i:=1; count:=0; layer:=0; bool:=false;
+ while(i<=code.count)do
+  begin
+   if(code.item[i-1]='[') or (code.item[i-1]='(')
+   or (code.item[i-1]='<') then inc(layer);
+   if(code.item[i-1]=']') or (code.item[i-1]=')')
+   or (code.item[i-1]='>') then dec(layer);
+   if(layer=0) and (code.item[i-1]='=') and (bool=false) then
+    begin
+     inc(i); bool:=true; continue;
+    end
+   else if(bool=true) and (count=0) then
+    begin
+     if(layer=1) and (code.item[i-1]='[') then break;
+     if(layer>=2) and (code.item[i-1]='>>') then dec(layer,2);
+     if(layer=0) and (code.item[i-1]=']') then inc(count);
+    end
+   else if(bool=true) and (count=1) then
+    begin
+     if(layer=0) and (code.item[i-1]='->') then break;
+     if(layer=1) and (code.item[i-1]='(') then break;
+     if(layer=0) and (code.item[i-1]='{') then break;
+     if(layer>=2) and (code.item[i-1]='>>') then dec(layer,2);
+     if(layer=0) and (code.item[i-1]=')') then inc(count);
+    end;
+   inc(i);
+  end;
+ if(count>=1) then exit(true)
+ else if(i<=code.count) and (code.item[i-1]='->') then exit(true);
+ c_string_detect_lambda:=false;
+end;
 function c_string_check_operator(code:c_string):boolean;
 var i,j,layer2,layer:SizeInt;
 begin
@@ -1485,8 +1656,34 @@ begin
   end;
  if(i<=code.count) then c_string_check_const:=true else c_string_check_const:=false;
 end;
-function c_string_check_function(code:c_string;spec:byte=0):boolean;
-var i,j,layer,layer2,count:SizeInt;
+function c_string_check_param_statement(code:c_string):boolean;
+var i,j,count,layer:SizeInt;
+begin
+ i:=1; count:=0; layer:=0;
+ if(code.count>=1) and (code.item[0]='(') then exit(false);
+ if(code.count>=1) and (code.item[0]='*') then exit(false);
+ if(code.count=1) and (code.item[0]='...') then exit(true);
+ while(i<=code.count)do
+  begin
+   if(code.item[i-1]='(') then inc(layer);
+   if(code.item[i-1]=')') then dec(layer);
+   if(layer=0) and (code.item[i-1]=')') then
+    begin
+     inc(count); inc(i); continue;
+    end;
+   if(layer=0) and (count>0) and (code.item[i-1]<>'(') then break;
+   if(count<2) and (layer=0) and (code.item[i-1]='=') then exit(false);
+   if(layer=0) and (c_string_is_operator(code.item[i-1])>0)
+   and (code.item[i-1]<>'*') and (code.item[i-1]<>'=') and (code.item[i-1]<>'...') then exit(false);
+   if(layer=0) and (code.item[i-1]=',') then exit(false);
+   inc(i);
+  end;
+ if(count>=2) or (count<1) then c_string_check_param_statement:=true
+ else c_string_check_param_statement:=false;
+end;
+function c_string_check_function(code:c_string):boolean;
+var i,j,k,layer,layer2,count:SizeInt;
+    tempcstr:c_string;
 begin
  i:=1;
  layer:=0; count:=0;
@@ -1520,25 +1717,41 @@ begin
       end;
      i:=j+1; continue;
     end;
-   if(code.item[i-1]='(') then inc(layer);
+   if(code.item[i-1]='(') then
+    begin
+     inc(layer);
+     if(layer=1) then k:=i+1;
+    end;
    if(code.item[i-1]=')') then dec(layer);
    if(code.item[i-1]=')') and (layer=0) then inc(count);
    if(Pos('=',code.item[i-1])>0) and (layer=0) and (count<1) then break;
+   if((layer=1) and (code.item[i-1]=',')) or ((layer=0) and (code.item[i-1]=')'))then
+    begin
+     tempcstr:=c_string_copy_item(code,k,i-k);
+     if(c_string_check_param_statement(tempcstr)=false) then break;
+     k:=i+1;
+    end;
+   if(layer=0) and (code.item[i-1]='constexpr') then break;
    inc(i);
   end;
  if(i<=code.count) then c_string_check_function:=false
  else if(count>1) or (count=0) then c_string_check_function:=false
  else c_string_check_function:=true;
 end;
-function c_string_check_class_function(code:c_string;spec:byte=0):boolean;
-var i,j,layer,layer2,count:SizeInt;
+function c_string_check_class_function(code:c_string):boolean;
+var i,j,k,layer,layer2,count:SizeInt;
+    tempcstr:c_string;
 begin
  i:=1; layer:=0; count:=0;
- if(code.count>=1) and (spec=1) and (code.item[0]='(') then
+ if(code.count>=1) and (code.item[0]='(') then
   begin
    exit(false);
   end
  else if(code.count>=1) and (code.item[0]='{') then
+  begin
+   exit(false);
+  end
+ else if(code.count>=1) and (code.item[0]='::') then
   begin
    exit(false);
   end;
@@ -1556,30 +1769,74 @@ begin
       end;
      i:=j+1; continue;
     end;
-   if(code.item[i-1]='(') then inc(layer);
+   if(code.item[i-1]='(') then
+    begin
+     inc(layer);
+     if(layer=1) then k:=i+1;
+    end;
    if(code.item[i-1]=')') then dec(layer);
    if(code.item[i-1]=')') and (layer=0) then inc(count);
-   if(layer=0) and (code.item[i-1]='::') then break;
    if(layer=0) and (Pos('=',code.item[i-1])>0) and (count<1) then exit(false);
+   if(layer=0) and (count=1) and (code.item[i-1]='=') then
+    begin
+     exit(true);
+    end;
+   if((layer=1) and (code.item[i-1]=',')) or ((layer=0) and (code.item[i-1]=')')) then
+    begin
+     tempcstr:=c_string_copy_item(code,k,i-k);
+     if(c_string_check_param_statement(tempcstr)=false) then break;
+     k:=i+1;
+    end;
+   if(layer=0) and (code.item[i-1]='constexpr') then
+    begin
+     exit(false);
+    end;
    inc(i);
   end;
- if(i>code.Count) then c_string_check_class_function:=false else c_string_check_class_function:=true;
+ if(i>code.Count) and (count=1) then
+  begin
+   c_string_check_class_function:=true
+  end
+ else
+  begin
+   c_string_check_class_function:=false;
+  end;
+end;
+function c_string_check_constexpr_function(code:c_string):boolean;
+var i,layer:SizeInt;
+    res:boolean;
+begin
+ i:=1; layer:=0;
+ while(i<=code.count)do
+  begin
+   if(code.item[i-1]='(') and (i=1) then exit(false);
+   if(code.item[i-1]='(') then inc(layer);
+   if(code.item[i-1]=')') then dec(layer);
+   if(layer=0) and (code.item[i-1]='constexpr') then break;
+   inc(i);
+  end;
+ if(i>code.count) then c_string_check_constexpr_function:=false
+ else c_string_check_constexpr_function:=true;
 end;
 function c_string_check_statement(state:c_string):boolean;
-var i:SizeInt;
+var i,layer:SizeInt;
     res:boolean;
 begin
  if(state.count>=2) then
   begin
-   i:=1;
+   i:=1; layer:=0;
    while(i<=state.count)do
     begin
-     if(c_string_is_operator(state.item[i-1])>0) then break
-     else if(c_string_is_bracket_string(state.item[i-1])) then break;
+     if(state.item[i-1]='<') then inc(layer);
+     if(state.item[i-1]='>') then dec(layer);
+     if(layer>1) and (state.item[i-1]='>>') then dec(layer,2);
+     if(layer=0) and (c_string_is_operator(state.item[i-1])>0) and (state.item[i-1]<>'::') then break
+     else if(layer=0) and (c_string_is_bracket_string(state.item[i-1])) then break;
      inc(i);
     end;
-   if(i<=state.count) and
-   (c_string_is_operator(state.item[i-1])>0) and (state.item[i-1]<>'*') then dec(i)
+   if(i<=state.count) and (state.item[i-1]<>'<') and (state.item[i-1]<>'>') and
+   (c_string_is_operator(state.item[i-1])>0) and (state.item[i-1]<>'*')
+   and (state.item[i-1]<>'::') then dec(i)
    else if(i<=state.count) and (c_string_is_bracket_string(state.item[i-1])) then dec(i);
    if(i>=2) then res:=true else res:=false;
   end
@@ -1644,11 +1901,12 @@ begin
   end;
  c_string_convert_integer:=res;
 end;
-function c_string_compare(const cstr1,cstr2:c_string):boolean;
+function c_string_compare(const cstr1,cstr2:c_string;spec:byte=0):boolean;
 var i,len:SizeInt;
     res:boolean;
 begin
  i:=1; res:=true;
+ if(spec=1) and (cstr1.count<>cstr2.count) then exit(false);
  len:=Min(cstr1.count,cstr2.count);
  while(i<=len) and (res=true) do
   begin
@@ -1874,8 +2132,7 @@ begin
   end;
 end;
 function c_number_to_c_char(num:word):string;
-var res:char;
-    ii:Byte;
+var ii:Byte;
 begin
  if(num>255) then
   begin
@@ -3163,9 +3420,16 @@ begin
     begin
      start:=1;
      tempcstr1:=deflist.define[i-1].defname;
-     if(deflist.define[i-1].defhavevalue=false) then continue;
      repeat
       j:=c_string_search_for_keyword(exp,tempcstr1.item[0],start);
+      if(j>0) and (codelist.define[i-1].defhavevalue=false) then
+       begin
+        c_string_delete_item(exp,j,1); continue;
+       end
+      else if(codelist.define[i-1].defhavevalue=false) then
+       begin
+        break;
+       end;
       tempcstr2:=deflist.define[i-1].defvalue;
       if(j=0) then break;
       if(tempcstr1.Count=1) then
@@ -3177,7 +3441,15 @@ begin
       else
        begin
         paramcount1:=0; paramcount2:=0;
-        m:=j+1; n:=j+2; layer:=1;
+        m:=j+1; n:=j+2; layer:=0;
+        if(j+1>exp.count) then
+         begin
+          start:=j+1; continue;
+         end
+        else if(exp.item[j]='[') then
+         begin
+          start:=j+1; continue;
+         end;
         while(m<=exp.count)do
          begin
           if(exp.item[m-1]='(') then inc(layer);
@@ -3249,9 +3521,16 @@ begin
     begin
      start:=1;
      tempcstr1:=codelist.define[i-1].defname;
-     if(codelist.define[i-1].defhavevalue=false) then continue;
      repeat
       j:=c_string_search_for_keyword(exp,tempcstr1.item[0],start);
+      if(j>0) and (codelist.define[i-1].defhavevalue=false) then
+       begin
+        c_string_delete_item(exp,j,1); continue;
+       end
+      else if(codelist.define[i-1].defhavevalue=false) then
+       begin
+        break;
+       end;
       tempcstr2:=codelist.define[i-1].defvalue;
       if(j=0) then break;
       if(tempcstr1.Count=1) then
@@ -3263,6 +3542,14 @@ begin
       else
        begin
         paramcount1:=0; paramcount2:=0;
+        if(j+1>exp.count) then
+         begin
+          start:=j+1; continue;
+         end
+        else if(exp.item[j]='[') then
+         begin
+          start:=j+1; continue;
+         end;
         m:=j+1; n:=j+2; layer:=0;
         while(m<=exp.count)do
          begin
@@ -3412,7 +3699,8 @@ begin
         end;
        if(j>1) and (exp.item[j-2]='(') then
         begin
-         if(j>2) and ((c_string_is_operator(exp.item[j-3])=0) or (exp.item[j-3]='*')) then
+         if(j>2) and ((c_string_is_operator(exp.item[j-3])=0) or (exp.item[j-3]='*')
+         or (exp.item[j-3]='>')) then
           begin
            inc(i); continue;
           end
@@ -3455,33 +3743,36 @@ begin
       begin
        if(code.item[j-1]='(') then inc(layer2);
        if(code.item[j-1]=')') then dec(layer2);
-       if(layer2=layer) and (j<code.count) and (code.item[j]=')') then break;
-       if(j>1) and (c_string_is_operator(code.item[j-2])=0)
+       if(layer2=layer-1) and (code.item[j-1]=')') then break;
+       if(j>1) and ((c_string_is_operator(code.item[j-2])=0) or
+       (code.item[j-2]='>>') or (code.item[j-2]='>'))
        and (c_string_is_operator(code.item[j-1])>0)
        and (Pos('=',code.item[j-1])>0) then
         begin
          bool:=true;
         end
-       else if(j>1) and (c_string_is_operator(code.item[j-2])=0)
+       else if(j>1) and ((c_string_is_operator(code.item[j-2])=0) or
+       (code.item[j-2]='>>') or (code.item[j-2]='>'))
        and (c_string_is_operator(code.item[j-1])=0) then
         begin
          bool:=true;
         end
-       else if(c_string_is_operator(code.item[j-1])>0) and (Pos('=',code.item[j-1])=0) then
+       else if(c_string_is_operator(code.item[j-1])>0) and
+       (Pos('=',code.item[j-1])=0) then
         begin
          bool:=true;
         end
-       else if(code.item[j-1]='||') or (code.item[j-1]='&&') and (bool=false) then
+       else if(code.item[j-1]='||') or (code.item[j-1]='&&') then
         begin
          c_string_insert_string(tempcstr,code,j);
-         inc(j,2);
+         inc(j,2); continue;
         end;
        inc(j);
       end;
      i:=j+1;
      if(bool=false) then
       begin
-       c_string_insert_string(tempcstr,code,j);
+       c_string_insert_string(tempcstr,code,j+1);
        inc(i,2);
       end;
     end;
@@ -3490,7 +3781,7 @@ begin
 end;
 function construct_c_item(incode,inextcode:c_string;codelist:c_define_list;
 specindex:byte=0;specindex2:byte=0;pack:byte=0):cov_item;
-var i,j,k,m,n,l,r,layer,layer2,layer3,len:SizeInt;
+var i,j,k,m,n,l,r,layer,layer2,layer3,count,len:SizeInt;
     code,extcode,tempcstr,tempcstr2:c_string;
     bool,bool2,retbool:boolean;
     tempstr1,tempstr2,tempstr3:string;
@@ -3512,7 +3803,6 @@ var i,j,k,m,n,l,r,layer,layer2,layer3,len:SizeInt;
     classmemstate:Pc_class_member;
     classtagstate:Pc_class_tag;
     namespacestate:Pc_namespace;
-    templatestate:Pc_template;
     extstate:Pc_extern;
     extcstate:Pc_extern_c;
     funcstate:Pc_function;
@@ -3527,6 +3817,8 @@ var i,j,k,m,n,l,r,layer,layer2,layer3,len:SizeInt;
     opestate:Pc_operator;
     unsstate:Pc_using_namespace;
     unstrstate:Pc_unhandled;
+    cexprstate:Pc_constexpr_function;
+    lambdastate:Pc_lambda_expression;
 begin
  {Handle the paramaters}
  retbool:=false; bool:=false; bool2:=false;
@@ -3563,7 +3855,7 @@ begin
    res.covcontent:=nil;
    construct_c_item:=res;
   end
- else if(retbool=true) then
+ else if(retbool) then
   begin
    New(unstrstate);
    unstrstate^.content:=code;
@@ -3579,7 +3871,7 @@ begin
    res.covcontent:=asmcodestate;
    construct_c_item:=res;
   end
- else if(code.item[0]='using') then
+ else if(code.item[0]='using') and (code.item[1]='namespace') then
   begin
    New(unsstate);
    unsstate^.namespace:=code.item[2];
@@ -3587,11 +3879,48 @@ begin
    res.covcontent:=unsstate;
    construct_c_item:=res;
   end
+ else if(code.item[0]='using') then
+  begin
+   i:=2;
+   while(i<=code.count)do
+    begin
+     if(code.item[i-1]='=') then break;
+     inc(i);
+    end;
+   tempcstr:=c_string_copy_item(code,2,i-1);
+   tempcstr2:=c_string_copy_item(code,i+1,code.count-i);
+   i:=1;
+   while(i<=tempcstr2.count)do
+    begin
+     if(i<tempcstr2.count) and (tempcstr2.item[i-1]='*') and (tempcstr2.item[i]=')') then
+      begin
+       c_string_insert_string(tempcstr,tempcstr2,i+1); break;
+      end;
+     inc(i);
+    end;
+   i:=1;
+   while(i<=tempcstr2.count)do
+    begin
+     if(i<tempcstr2.count) and (tempcstr2.item[i]='(') then break;
+     inc(i);
+    end;
+   New(tdefstate);
+   tdefstate^.oldvalue:=c_string_copy_item(tempcstr2,1,i);
+   tdefstate^.newvalue:=c_string_copy_item(tempcstr2,i+1,tempcstr2.count-i);
+   tdefstate^.align:=0;
+   res.covtype:=c_node_typedef;
+   res.covcontent:=tdefstate;
+   construct_c_item:=res;
+  end
  else if(code.item[0]='if') then
   begin
    i:=2; layer:=0;
    while(i<=code.count)do
     begin
+     if(code.item[i-1]='constexpr') then
+      begin
+       c_string_delete_item(code,i,1); continue;
+      end;
      if(code.item[i-1]='(') then inc(layer);
      if(code.item[i-1]=')') then dec(layer);
      if(layer=0) then break;
@@ -3623,6 +3952,10 @@ begin
    i:=3; layer:=0;
    while(i<=code.count)do
     begin
+     if(code.item[i-1]='constexpr') then
+      begin
+       c_string_delete_item(code,i,1); continue;
+      end;
      if(code.item[i-1]='(') then inc(layer);
      if(code.item[i-1]=')') then dec(layer);
      if(layer=0) then break;
@@ -3682,7 +4015,7 @@ begin
   end
  else if(code.item[0]='for') then
   begin
-   i:=2; layer:=0;
+   i:=2; layer:=0; bool:=true;
    while(i<=code.count)do
     begin
      if(code.item[i-1]='(') then inc(layer);
@@ -3690,7 +4023,7 @@ begin
      if(layer=0) then break;
      inc(i);
     end;
-   if(i<code.count) then
+   if(i<code.count) or (bool=false) then
     begin
      New(unstrstate);
      c_string_insert_item(';',code,code.count+1);
@@ -3755,8 +4088,8 @@ begin
  else if(code.item[0]='do') then
   begin
    New(loopstate);
-   loopstate^.looptype:=c_node_loop_do_while;;
-   loopstate^.condition:=c_string_copy_item(extcode,2,code.count-1);
+   loopstate^.looptype:=c_node_loop_do_while;
+   loopstate^.condition:=c_string_copy_item(extcode,2,extcode.count-1);
    condition_rehandle(loopstate^.condition);
    loopstate^.havestep:=false; loopstate^.haveinit:=false;
    res.covtype:=c_node_loop_statement;
@@ -3940,39 +4273,105 @@ begin
    res.covcontent:=returnstate;
    construct_c_item:=res;
   end
- else if(code.item[0]='class') then
+ else if(c_string_detect_class(code)) then
   begin
    New(classstate);
    classstate^.classname:=code.item[1];
    classstate^.inheritcount:=0;
-   i:=4; j:=4;
-   while(i<=code.count) do
+   classstate^.generichave:=false;
+   classstate^.genericcount:=0;
+   i:=1; j:=1;
+   while(i<=code.count)do
     begin
-     if(code.item[i-1]=',') or (i=code.count) then
+     if(code.item[i-1]='template') then
       begin
-       inc(classstate^.inheritcount);
-       if(code.item[j-1]='public') then
+       classstate^.generichave:=true;
+       j:=i+1; k:=i+2; layer:=0;
+       while(j<=code.count)do
         begin
-         SetLength(classstate^.inheritbyte,classstate^.inheritcount);
-         SetLength(classstate^.inheritclass,classstate^.inheritcount);
-         classstate^.inheritbyte[classstate^.inheritcount-1]:=c_node_class_public;
-         classstate^.inheritclass[classstate^.inheritcount-1]:=code.item[j];
-        end
-       else if(code.item[j-1]='private') then
-        begin
-         SetLength(classstate^.inheritbyte,classstate^.inheritcount);
-         SetLength(classstate^.inheritclass,classstate^.inheritcount);
-         classstate^.inheritbyte[classstate^.inheritcount-1]:=c_node_class_private;
-         classstate^.inheritclass[classstate^.inheritcount-1]:=code.item[j];
-        end
-       else if(code.item[j-1]='protected') then
-        begin
-         SetLength(classstate^.inheritbyte,classstate^.inheritcount);
-         SetLength(classstate^.inheritclass,classstate^.inheritcount);
-         classstate^.inheritbyte[classstate^.inheritcount-1]:=c_node_class_protected;
-         classstate^.inheritclass[classstate^.inheritcount-1]:=code.item[j];
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(classstate^.genericcount);
+           SetLength(classstate^.genericitem,classstate^.genericcount);
+           classstate^.genericitem[classstate^.genericcount-1]:=
+           c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
         end;
-       i:=j+1;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='<') then
+      begin
+       j:=i; k:=i+1; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(classstate^.genericspeccount);
+           SetLength(classstate^.genericspec,classstate^.genericspeccount);
+           classstate^.genericitem[classstate^.genericspeccount-1]:=c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='class') then
+      begin
+       classstate^.classname:=code.item[i];
+       c_string_delete_item(code,i,2); continue;
+      end
+     else if(code.item[i-1]=':') then
+      begin
+       j:=i+1; k:=i+1;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]=',') or (j=code.count) then
+          begin
+           if(j=code.count) then tempcstr:=c_string_copy_item(code,k,j-k+1)
+           else tempcstr:=c_string_copy_item(code,k,j-k);
+           inc(classstate^.inheritcount);
+           SetLength(classstate^.inheritbyte,classstate^.inheritcount);
+           SetLength(classstate^.inheritclass,classstate^.inheritcount);
+           if(tempcstr.item[0]='public') then
+            begin
+             classstate^.inheritbyte[classstate^.inheritcount-1]:=c_node_class_public;
+             classstate^.inheritclass[classstate^.inheritcount-1]:=tempcstr.item[1];
+            end
+           else if(tempcstr.item[0]='private') then
+            begin
+             classstate^.inheritbyte[classstate^.inheritcount-1]:=c_node_class_private;
+             classstate^.inheritclass[classstate^.inheritcount-1]:=tempcstr.item[1];
+            end
+           else if(tempcstr.item[0]='protected') then
+            begin
+             classstate^.inheritbyte[classstate^.inheritcount-1]:=c_node_class_protected;
+             classstate^.inheritclass[classstate^.inheritcount-1]:=tempcstr.item[1];
+            end;
+           k:=j+1;
+          end;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1); continue;
       end;
      inc(i);
     end;
@@ -3989,6 +4388,7 @@ begin
      structstate^.structdefname:='';
      structstate^.pack:=pack;
      structstate^.varcount:=0;
+     structstate^.generichave:=false;
      i:=2; j:=2;
      while(i<=code.Count)do
       begin
@@ -4450,22 +4850,6 @@ begin
    res.covcontent:=namespacestate;
    construct_c_item:=res;
   end
- else if(code.item[0]='template') then
-  begin
-   New(templatestate);
-   templatestate^.tlcount:=0;
-   i:=3; len:=code.count-1;
-   while(i<=len) do
-    begin
-     inc(templatestate^.tlcount);
-     SetLength(templatestate^.tlcontent,templatestate^.tlcount);
-     templatestate^.tlcontent[templatestate^.tlcount-1]:=c_string_copy_item(code,i,2);
-     inc(i,3);
-    end;
-   res.covtype:=c_node_template;
-   res.covcontent:=templatestate;
-   construct_c_item:=res;
-  end
  else if(code.item[0]='goto') and (code.count=2) then
   begin
    New(gotostate);
@@ -4484,7 +4868,55 @@ begin
    res.covcontent:=gotostate;
    construct_c_item:=res;
   end
- else if(c_string_check_operator(code)) and (bool=false) then
+ else if(c_string_check_constexpr_function(code)) and (c_string_check_function(code))
+ and (bool=false) then
+  begin
+   New(cexprstate);
+   cexprstate^.funcname:='';
+   cexprstate^.funccount:=0;
+   cexprstate^.functype:='';
+   i:=1; layer:=0;
+   while(i<=code.count)do
+    begin
+     if(code.item[i-1]='constexpr') or (code.item[i-1]='const') then
+      begin
+       c_string_delete_item(code,i,1); continue;
+      end
+     else if(code.item[i-1]='(') then
+      begin
+       cexprstate^.funcname:=code.item[i-2];
+       j:=i+1; k:=i+1; layer:=1;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='(') then inc(layer);
+         if(code.item[j-1]=')') then dec(layer);
+         if((layer=1) and (code.item[j-1]=',')) and ((layer=0) and (code.item[j-1]=')')) then
+          begin
+           inc(cexprstate^.funccount);
+           SetLength(cexprstate^.funcparam,cexprstate^.funccount);
+           cexprstate^.funcparam[cexprstate^.funccount-1]:=c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i-1,j-i+2);
+      end;
+     inc(i);
+    end;
+   i:=1;
+   while(i<=code.count)do
+    begin
+     cexprstate^.functype:=cexprstate^.functype+code.item[i-1];
+     if(i<code.count) and (code.item[i-1]<>'*') and (code.item[i]<>'*')
+     then cexprstate^.functype:=cexprstate^.functype+' ';
+    end;
+   res.covcontent:=cexprstate;
+   res.covtype:=c_node_constexpr_function;
+   construct_c_item:=res;
+  end
+ else if((c_string_check_operator(code)) and (bool=false)) or
+ ((specindex2=2) and (c_string_check_operator(code)) and (bool=false)) then
   begin
    New(opestate);
    opestate^.isvirtual:=false;
@@ -4497,13 +4929,69 @@ begin
    opestate^.section:='';
    opestate^.atpos:='';
    opestate^.abi:='';
+   opestate^.conv:='cdecl';
    opestate^.opeparamcount:=0;
    opestate^.operestype:='';
    opestate^.isasm:=false;
+   opestate^.generichave:=false;
+   opestate^.genericcount:=0;
+   opestate^.genericspeccount:=0;
    i:=1; layer:=0;
    while(i<=code.count) do
     begin
-     if(code.item[i-1]='__cdecl') then
+     if(code.item[i-1]='template') then
+      begin
+       opestate^.generichave:=true;
+       j:=i+1; k:=i+2; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(opestate^.genericcount);
+           SetLength(opestate^.genericitem,opestate^.genericcount);
+           opestate^.genericitem[opestate^.genericcount-1]:=
+           c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='<') then
+      begin
+       j:=i; k:=i+1; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(opestate^.genericspeccount);
+           SetLength(opestate^.genericspec,opestate^.genericspeccount);
+           opestate^.genericspec[opestate^.genericspeccount-1]:=c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='__cdecl') then
       begin
        opestate^.conv:='cdecl';
       end
@@ -4538,6 +5026,10 @@ begin
      else if(code.item[i-1]='inline') then
       begin
        opestate^.isinline:=true; c_string_delete_item(code,i,1); continue;
+      end
+     else if(code.item[i-1]='register') then
+      begin
+       opestate^.conv:='register'; c_string_delete_item(code,i,1); continue;
       end
      else if(code.item[i-1]='EFIAPI') or (code.item[i-1]='efiapi') then
       begin
@@ -4703,13 +5195,20 @@ begin
    res.covcontent:=opestate;
    construct_c_item:=res;
   end
- else if(specindex2=2) and (c_string_search_for_keyword(code,'=')>0)
+ else if(specindex2=2) and (c_string_check_class_function(code))
  and (c_string_check_function(code)) and (bool=true) then
   begin
    New(classfuncstate);
    classfuncstate^.isabstract:=true;
-   classfuncstate^.isconstexpr:=false;
-   i:=1; len:=c_string_search_for_keyword(code,'=')-1; layer:=0;
+   i:=1; layer:=0;
+   while(i<=code.count)do
+    begin
+     if(code.item[i-1]='(') then inc(layer);
+     if(code.item[i-1]=')') then dec(layer);
+     if(layer=0) and (code.item[i-1]='=') then break;
+     inc(i);
+    end;
+   len:=i-1;
    classfuncstate^.isconstructor:=false;
    classfuncstate^.isdestructor:=false;
    classfuncstate^.isoverride:=false;
@@ -4723,16 +5222,21 @@ begin
    classfuncstate^.funcat:='';
    classfuncstate^.funcconv:='cdecl';
    classfuncstate^.paramcount:=0;
+   classfuncstate^.generichave:=false;
+   classfuncstate^.genericcount:=0;
+   classfuncstate^.genericspeccount:=0;
+   classfuncstate^.funchaveinit:=false;
    if(code.item[1]='(') then
     begin
      classfuncstate^.isconstructor:=true;
      classfuncstate^.isdestructor:=false;
     end;
+   i:=1;
    while(i<=len) do
     begin
      if(code.item[i-1]='(') then inc(layer);
      if(code.item[i-1]=')') then dec(layer);
-     if(layer=0) and (code.item[i]='=') then break;
+     if(layer=0) and (code.item[i-1]='=') then break;
      if(layer=0) then
       begin
        if(code.item[i-1]='virtual') then classfuncstate^.isvirtual:=true
@@ -4745,7 +5249,7 @@ begin
      inc(i);
     end;
    if(classfuncstate^.isabstract=false) and (classfuncstate^.isvirtual=true)
-   and(code.item[i+1]='0') then
+   and (i<len) and (code.item[i]='0') then
     begin
      classfuncstate^.isabstract:=true;
     end;
@@ -4753,12 +5257,12 @@ begin
    res.covcontent:=classfuncstate;
    construct_c_item:=res;
   end
- else if(c_string_check_class_function(code)) or
- ((c_string_check_function(code)) and (specindex2=2) and (bool=false)) then
+ else if((c_string_check_class_function(code)) and (specindex2=2)) or
+ ((c_string_check_class_function(code)) and (specindex2=0) and (bool=false)) or
+ ((c_string_check_function(code)) and (specindex2=2)) then
   begin
    New(classfuncstate);
    classfuncstate^.isstatic:=false;
-   classfuncstate^.isconstexpr:=false;
    classfuncstate^.funcinline:=false;
    classfuncstate^.isvirtual:=false;
    classfuncstate^.hostclassname:='';
@@ -4777,13 +5281,77 @@ begin
    classfuncstate^.isvirtual:=false;
    classfuncstate^.isabstract:=false;
    classfuncstate^.isasm:=false;
-   classfuncstate^.gclassbool:=false;
+   classfuncstate^.generichave:=false;
+   classfuncstate^.genericcount:=0;
+   classfuncstate^.genericspeccount:=0;
+   classfuncstate^.funchaveinit:=false;
    i:=1;
    while(i<=code.count)do
     begin
-     if(code.item[i-1]='static') then
+     if(code.item[i-1]=':') then
+      begin
+       classfuncstate^.funchaveinit:=true;
+       classfuncstate^.funcinit:=c_string_copy_item(code,i+1,code.count-i);
+      end
+     else if(code.item[i-1]='template') then
+      begin
+       classfuncstate^.generichave:=true;
+       j:=i+1; k:=i+2; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(classfuncstate^.genericcount);
+           SetLength(classfuncstate^.genericitem,classfuncstate^.genericcount);
+           classfuncstate^.genericitem[classfuncstate^.genericcount-1]:=
+           c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='<') then
+      begin
+       j:=i; k:=i+1; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(classfuncstate^.genericspeccount);
+           SetLength(classfuncstate^.genericspec,classfuncstate^.genericspeccount);
+           classfuncstate^.genericspec[classfuncstate^.genericspeccount-1]:=c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='static') then
       begin
        classfuncstate^.isstatic:=true; c_string_delete_item(code,i,1); continue;
+      end
+     else if(code.item[i-1]='register') then
+      begin
+       classfuncstate^.funcconv:='register'; c_string_delete_item(code,i,1); continue;
       end
      else if(code.item[i-1]='register') then
       begin
@@ -4804,10 +5372,6 @@ begin
      else if(code.item[i-1]='~') then
       begin
        classfuncstate^.isdestructor:=true; c_string_delete_item(code,i,1); continue;
-      end
-     else if(code.item[i-1]='constexpr') then
-      begin
-       classfuncstate^.isconstexpr:=true; c_string_delete_item(code,i,1); continue;
       end
      else if(code.item[i-1]='const') then
       begin
@@ -4956,20 +5520,6 @@ begin
        classfuncstate^.funcname:=code.item[i+1];
        inc(i,3); continue;
       end
-     else if(i<code.count) and (code.item[i]='<') then
-      begin
-       j:=i+1; layer:=0;
-       while(j<=code.count) do
-        begin
-         if(code.item[j-1]='<') then inc(layer);
-         if(code.item[j-1]='>') then dec(layer);
-         if(layer=0) then break;
-        end;
-       classfuncstate^.gclassbool:=true;
-       classfuncstate^.gclassname:=c_string_copy_item(code,i+1,j-i);
-       classfuncstate^.funcname:=code.item[j+1];
-       i:=j+1; continue;
-      end
      else if((i<code.Count) and (code.item[i]='(')) or (code.item[i-1]='(') then
       begin
        if(classfuncstate^.funcname='') and (code.item[i-1]<>'(')
@@ -5012,12 +5562,11 @@ begin
    res.covcontent:=classfuncstate;
    construct_c_item:=res;
   end
- else if(c_string_check_function(code)) and (specindex2<2) then
+ else if(c_string_check_function(code)) and (bool=false) and (specindex2<2) then
   begin
    New(funcstate);
    funcstate^.funcinline:=false;
    funcstate^.funcstatic:=false;
-   funcstate^.isconstexpr:=false;
    funcstate^.funcinline:=false;
    funcstate^.isasm:=false;
    funcstate^.funcat:='';
@@ -5028,10 +5577,65 @@ begin
    funcstate^.funcalias:='';
    funcstate^.funcabi:='';
    funcstate^.paramcount:=0;
+   funcstate^.generichave:=false;
+   funcstate^.genericcount:=0;
+   funcstate^.genericspeccount:=0;
    i:=1;
    while(i<=code.count)do
     begin
-     if(code.item[i-1]='static') then
+     if(code.item[i-1]='template') then
+      begin
+       funcstate^.generichave:=true;
+       j:=i+1; k:=i+2; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(funcstate^.genericcount);
+           SetLength(funcstate^.genericitem,funcstate^.genericcount);
+           funcstate^.genericitem[funcstate^.genericcount-1]:=
+           c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='<') then
+      begin
+       j:=i; k:=i+1; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(funcstate^.genericspeccount);
+           SetLength(funcstate^.genericspec,funcstate^.genericspeccount);
+           funcstate^.genericspec[funcstate^.genericspeccount-1]:=c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='static') then
       begin
        funcstate^.funcstatic:=true; c_string_delete_item(code,i,1); continue;
       end
@@ -5039,9 +5643,9 @@ begin
       begin
        funcstate^.funcinline:=true; c_string_delete_item(code,i,1); continue;
       end
-     else if(code.item[i-1]='constexpr') then
+     else if(code.item[i-1]='register') then
       begin
-       funcstate^.isconstexpr:=true; c_string_delete_item(code,i,1); continue;
+       funcstate^.funcconv:='register'; c_string_delete_item(code,i,1); continue;
       end
      else if(code.item[i-1]='const') then
       begin
@@ -5226,8 +5830,7 @@ begin
    res.covcontent:=funcstate;
    construct_c_item:=res;
   end
- else if(c_string_search_for_keyword(code,'const')>0) and
- (c_string_check_function(code)=false) and (c_string_check_const(code)) and (specindex2=0) then
+ else if(c_string_check_function(code)=false) and (c_string_check_const(code)) and (specindex2=0) then
   begin
    New(conststate);
    conststate^.cconstexpr:=false;
@@ -5437,10 +6040,65 @@ begin
    structstate^.structtype:=false;
    structstate^.structtname:='';
    structstate^.pack:=pack;
-   i:=2; j:=2;
+   structstate^.generichave:=false;
+   structstate^.genericcount:=0;
+   structstate^.genericspeccount:=0;
+   i:=1; j:=1; layer:=0;
    while(i<=code.Count)do
     begin
-     if(code.item[i-1]='struct') then
+     if(code.item[i-1]='template') then
+      begin
+       structstate^.generichave:=true;
+       j:=i+1; k:=i+2; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(structstate^.genericcount);
+           SetLength(structstate^.genericitem,structstate^.genericcount);
+           structstate^.genericitem[structstate^.genericcount-1]:=
+           c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='<') then
+      begin
+       j:=i; k:=i+1; layer:=0;
+       while(j<=code.count)do
+        begin
+         if(code.item[j-1]='<') then inc(layer);
+         if(code.item[j-1]='>') then dec(layer);
+         if(layer>=2) and (code.item[j-1]='>>') then
+          begin
+           code.item[j-1]:='>'; c_string_insert_item('>',code,j+1);
+           continue;
+          end;
+         if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]='>')) then
+          begin
+           inc(structstate^.genericspeccount);
+           SetLength(structstate^.genericspec,structstate^.genericspeccount);
+           structstate^.genericitem[structstate^.genericspeccount-1]:=c_string_copy_item(code,k,j-k);
+           k:=j+1;
+          end;
+         if(layer=0) then break;
+         inc(j);
+        end;
+       c_string_delete_item(code,i,j-i+1);
+       continue;
+      end
+     else if(code.item[i-1]='struct') then
       begin
        structstate^.structtype:=false; c_string_delete_item(code,i,1); continue;
       end
@@ -5517,6 +6175,7 @@ begin
        inc(structstate^.varcount);
        SetLength(structstate^.varname,structstate^.varcount);
        SetLength(structstate^.varvalue,structstate^.varcount);
+       SetLength(structstate^.varhavevalue,structstate^.varcount);
        SetLength(structstate^.structalign,structstate^.varcount);
        SetLength(structstate^.structat,structstate^.varcount);
        SetLength(structstate^.structsec,structstate^.varcount);
@@ -5578,10 +6237,12 @@ begin
           end;
          inc(k);
         end;
-       m:=1;
+       m:=1; layer:=0;
        while(m<=tempcstr.count)do
         begin
-         if(tempcstr.item[m-1]='=') then break;
+         if(tempcstr.item[m-1]='(') then inc(layer);
+         if(tempcstr.item[m-1]=')') then dec(layer);
+         if(layer=0) and (tempcstr.item[m-1]='=') then break;
          inc(m);
         end;
        if(m<=tempcstr.count) then
@@ -5773,6 +6434,8 @@ begin
        else tempcstr:=c_string_copy_item(code,j,i-j);
        inc(enumstate^.varcount);
        SetLength(enumstate^.varname,enumstate^.varcount);
+       SetLength(enumstate^.varhavevalue,enumstate^.varcount);
+       SetLength(enumstate^.varvalue,enumstate^.varcount);
        SetLength(enumstate^.enumalign,enumstate^.varcount);
        SetLength(enumstate^.enumat,enumstate^.varcount);
        SetLength(enumstate^.enumsec,enumstate^.varcount);
@@ -5834,10 +6497,12 @@ begin
           end;
          inc(k);
         end;
-       m:=1;
+       m:=1; layer:=0;
        while(m<=tempcstr.count)do
         begin
-         if(tempcstr.item[m-1]='=') then break;
+         if(tempcstr.item[m-1]='(') then inc(layer);
+         if(tempcstr.item[m-1]=')') then dec(layer);
+         if(layer=0) and (tempcstr.item[m-1]='=') then break;
          inc(m);
         end;
        if(m<=tempcstr.count) then
@@ -5870,7 +6535,82 @@ begin
  else if(specindex2=0) then
   begin
    i:=c_string_search_for_keyword(code,';');
-   if(i=0) and (c_string_check_statement(code)) then
+   if(i=0) and (c_string_detect_lambda(code)) then
+    begin
+     New(lambdastate);
+     lambdastate^.funcname:='';
+     lambdastate^.capturecount:=0;
+     lambdastate^.rettype:='';
+     lambdastate^.parametercount:=0;
+     i:=1;
+     while(i<=code.count)do
+      begin
+       if(code.item[i-1]='static') then
+        begin
+         c_string_delete_item(code,i,1); continue;
+        end
+       else if(code.item[i-1]='const') then
+        begin
+         c_string_delete_item(code,i,1); continue;
+        end
+       else if(code.item[i-1]='register') then
+        begin
+         c_string_delete_item(code,i,1); continue;
+        end
+       else if(code.item[i-1]='=') then
+        begin
+         lambdastate^.funcname:=code.item[i-2];
+         break;
+        end;
+       inc(i);
+      end;
+     j:=i+1; k:=i+2; layer:=0;
+     while(j<=code.count)do
+      begin
+       if(code.item[j-1]='[') then inc(layer);
+       if(code.item[j-1]=']') then dec(layer);
+       if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]=']')) then
+        begin
+         inc(lambdastate^.capturecount);
+         SetLength(lambdastate^.captureitem,lambdastate^.capturecount);
+         lambdastate^.captureitem[lambdastate^.capturecount-1]:=
+         c_string_copy_item(code,k,j-k);
+         k:=j+1;
+        end;
+       if(layer=0) then break;
+       inc(j);
+      end;
+     c_string_delete_item(code,i+1,j-i);
+     j:=i+1; k:=i+2; layer:=0;
+     while(j<=code.count)do
+      begin
+       if(code.item[j-1]='(') then inc(layer);
+       if(code.item[j-1]=')') then dec(layer);
+       if((layer=1) and (code.item[j-1]=',')) or ((layer=0) and (code.item[j-1]=']')) then
+        begin
+         inc(lambdastate^.parametercount);
+         SetLength(lambdastate^.parameteritem,lambdastate^.parametercount);
+         lambdastate^.parameteritem[lambdastate^.parametercount-1]:=
+         c_string_copy_item(code,k,j-k);
+         k:=j+1;
+        end;
+       if(layer=0) then break;
+       inc(j);
+      end;
+     c_string_delete_item(code,i+1,j-i);
+     j:=i+2; layer:=0;
+     while(j<=code.count)do
+      begin
+       lambdastate^.rettype:=lambdastate^.rettype+code.item[j-1];
+       if(j<code.count) and ((code.item[j-1]<>'*') or (code.item[j]<>'*')) then
+       lambdastate^.rettype:=lambdastate^.rettype+' ';
+       inc(j);
+      end;
+     res.covcontent:=lambdastate;
+     res.covtype:=c_node_lambda_expression;
+     construct_c_item:=res;
+    end
+   else if(i=0) and (c_string_check_statement(code)) then
     begin
      New(state);
      state^.statetype:='';
@@ -6130,22 +6870,75 @@ begin
       begin
        if(i=code.count) then tempcstr:=c_string_copy_item(code,j,i-j+1)
        else tempcstr:=c_string_copy_item(code,j,i-j);
-       k:=c_string_search_for_keyword(tempcstr,':');
-       if(k=0) then
+       k:=1; layer2:=0;
+       while(k<=tempcstr.count)do
         begin
-         inc(memstate^.membercount);
+         if(tempcstr.item[k-1]='(') then inc(layer2);
+         if(tempcstr.item[k-1]=')') then dec(layer2);
+         if(layer2=0) and (tempcstr.item[k-1]='=') then break;
+         inc(k);
+        end;
+       tempcstr:=c_string_copy_item(tempcstr,1,k-1);
+       k:=1; layer2:=0;
+       while(k<=tempcstr.count)do
+        begin
+         if(tempcstr.item[k-1]='(') then inc(layer2);
+         if(tempcstr.item[k-1]=')') then dec(layer2);
+         if(layer2=0) and (tempcstr.item[k-1]=':') then break;
+         inc(k);
+        end;
+       m:=1; layer2:=0;
+       while(m<=tempcstr.count)do
+        begin
+         if(tempcstr.item[m-1]='(') then inc(layer2);
+         if(tempcstr.item[m-1]=')') then dec(layer2);
+         if(layer2=0) and (tempcstr.item[m-1]='=') then break;
+         inc(m);
+        end;
+       if(k>tempcstr.count) then
+        begin
+         inc(classmemstate^.membercount);
          SetLength(classmemstate^.membername,classmemstate^.membercount);
          SetLength(classmemstate^.memberbit,classmemstate^.membercount);
-         classmemstate^.membername[memstate^.membercount-1]:=tempcstr;
-         classmemstate^.memberbit[memstate^.membercount-1]:=0;
+         SetLength(classmemstate^.memberhavevalue,classmemstate^.membercount);
+         SetLength(classmemstate^.membervalue,classmemstate^.membercount);
+         if(m>tempcstr.count) then
+          begin
+           classmemstate^.membername[classmemstate^.membercount-1]:=tempcstr;
+           classmemstate^.memberbit[classmemstate^.membercount-1]:=0;
+           classmemstate^.memberhavevalue[classmemstate^.membercount-1]:=false;
+           classmemstate^.membervalue[classmemstate^.membercount-1].count:=0;
+          end
+         else
+          begin
+           classmemstate^.membername[classmemstate^.membercount-1]:=
+           c_string_copy_item(tempcstr,1,m-1);
+           classmemstate^.memberbit[classmemstate^.membercount-1]:=0;
+           classmemstate^.memberhavevalue[classmemstate^.membercount-1]:=true;
+           classmemstate^.membervalue[classmemstate^.membercount-1]:=
+           c_string_Copy_item(tempcstr,m+1,tempcstr.count-m);
+          end;
         end
        else
         begin
          inc(memstate^.membercount);
          SetLength(memstate^.membername,classmemstate^.membercount);
          SetLength(memstate^.memberbit,classmemstate^.membercount);
-         classmemstate^.membername[classmemstate^.membercount-1]:=c_string_copy_item(tempcstr,1,k-1);
-         classmemstate^.memberbit[classmemstate^.membercount-1]:=Strtoint(tempcstr.item[k]);
+         if(m>tempcstr.count) then
+          begin
+           classmemstate^.membername[classmemstate^.membercount-1]:=c_string_copy_item(tempcstr,1,k-1);
+           classmemstate^.memberbit[classmemstate^.membercount-1]:=c_number_to_number(tempcstr.item[k]);
+           classmemstate^.memberhavevalue[classmemstate^.membercount-1]:=false;
+           classmemstate^.membervalue[classmemstate^.membercount-1].count:=0;
+          end
+         else
+          begin
+           classmemstate^.membername[classmemstate^.membercount-1]:=c_string_copy_item(tempcstr,1,k-1);
+           classmemstate^.memberbit[classmemstate^.membercount-1]:=c_number_to_number(tempcstr.item[k]);
+           classmemstate^.memberhavevalue[classmemstate^.membercount-1]:=true;
+           classmemstate^.membervalue[classmemstate^.membercount-1]:=
+           c_string_copy_item(tempcstr,m+1,tempcstr.count-m);
+          end;
         end;
        j:=i+1;
       end;
@@ -6273,7 +7066,8 @@ begin
    else if(ctree^.treetype=c_node_struct) then dispose(Pc_struct(ctree^.content))
    else if(ctree^.treetype=c_node_switch) then dispose(Pc_switch(ctree^.content))
    else if(ctree^.treetype=c_node_switch_case) then dispose(Pc_switch_case(ctree^.content))
-   else if(ctree^.treetype=c_node_template) then dispose(Pc_template(ctree^.content))
+   else if(ctree^.treetype=c_node_lambda_expression) then dispose(Pc_lambda_expression(ctree^.content))
+   else if(ctree^.treetype=c_node_constexpr_function) then dispose(Pc_constexpr_function(ctree^.content))
    else if(ctree^.treetype=c_node_typedef) then dispose(Pc_typedef(ctree^.content))
    else if(ctree^.treetype=c_node_using_namespace) then dispose(Pc_using_namespace(ctree^.content));
    ctree^.content:=nil;
@@ -6300,7 +7094,8 @@ var i,j,k,m,n,layer,layer2,start,myend:SizeInt;
     tempcode,tempstr,tempstr2,tempstr3,tempstr4:c_string;
     tempitem:cov_item;
     codelist:c_define_list;
-    bool,newbool:boolean;
+    bool,bool2:boolean;
+    status:byte=0;
     res:Pc_tree;
 begin
  if(code.Count<=0) then exit;
@@ -6316,13 +7111,15 @@ begin
  i:=1; j:=1;
  while(i<=tempcode.Count)do
   begin
-   start:=i; layer:=0;
+   start:=i; layer:=0; status:=0;
    if(tempcode.item[i-1]='#') then
     begin
-     j:=i+1;
+     j:=i+1; layer:=0;
      while(j<=tempcode.count)do
       begin
-       if(tempcode.status[j-1]=2) then break;
+       if(tempcode.item[j-1]='(') then inc(layer);
+       if(tempcode.item[j-1]=')') then dec(layer);
+       if(layer=0) and (tempcode.status[j-1]=2) then break;
        inc(j);
       end;
      tempstr:=c_string_copy_item(tempcode,i,j-i+1);
@@ -6365,6 +7162,7 @@ begin
         begin
          break;
         end;
+       if(layer=0) and (layer2=0) and (k<tempcode.count) and (tempcode.item[k]='}') then break;
        if(k=tempcode.count) then break;
        inc(k);
       end;
@@ -6406,14 +7204,28 @@ begin
       end
      else
       begin
-       layer:=0; layer2:=0;
+       layer:=0; layer2:=0; bool:=true;
        while(k<=tempcode.count)do
         begin
          if(tempcode.item[k-1]='(') then inc(layer);
          if(tempcode.item[k-1]=')') then dec(layer);
-         if(tempcode.item[k-1]='{') then inc(layer2);
-         if(tempcode.item[k-1]='}') then dec(layer2);
-         if(tempcode.item[k-1]=';') and (layer=0) and (layer2=0) then break;
+         if(tempcode.item[k-1]='{') then
+          begin
+           if(layer=0) and (layer2=0) and (bool=true) then bool:=false;
+           inc(layer2);
+          end;
+         if(tempcode.item[k-1]='}') then
+          begin
+           dec(layer2);
+          end;
+         if(layer=0) and (layer2=0) and ((tempcode.item[k-1]='if') or (tempcode.item[k-1]='while') or
+         (tempcode.item[k-1]='for') or (tempcode.item[k-1]='else')
+         or (tempcode.item[k-1]='do') or (tempcode.item[k-1]='switch')) then
+          begin
+           inc(k); bool:=true; continue;
+          end;
+         if(bool=false) and (layer=0) and (layer2=0) then break;
+         if(bool=true) and (layer=0) and (layer2=0) and (tempcode.item[k-1]=';') then break;
          inc(k);
         end;
        tempstr2.Count:=0;
@@ -6427,21 +7239,6 @@ begin
        tempstr3.Count:=0;
       end;
      i:=k;
-    end
-   else if(tempcode.item[i-1]='template') then
-    begin
-     j:=i+1; layer:=0;
-     while(j<=tempcode.count)do
-      begin
-       if(tempcode.item[j-1]='<') then inc(layer);
-       if(tempcode.item[j-1]='>') then dec(layer);
-       if(layer=0) then break;
-       inc(j);
-      end;
-     tempstr:=c_string_copy_item(tempcode,i,j-i+1);
-     tempstr2.Count:=0;
-     tempstr3.Count:=0;
-     i:=j;
     end
    else if(tempcode.item[i-1]='else') then
     begin
@@ -6461,13 +7258,28 @@ begin
       end
      else
       begin
+       bool:=true;
        while(j<=tempcode.count)do
         begin
          if(tempcode.item[j-1]='(') then inc(layer);
          if(tempcode.item[j-1]=')') then dec(layer);
-         if(tempcode.item[k-1]='{') then inc(layer2);
-         if(tempcode.item[k-1]='}') then dec(layer2);
-         if(layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
+         if(tempcode.item[j-1]='{') then
+          begin
+           if(layer=0) and (layer2=0) and (bool=true) then bool:=false;
+           inc(layer2);
+          end;
+         if(tempcode.item[j-1]='}') then
+          begin
+           dec(layer2);
+          end;
+         if(layer=0) and (layer2=0) and ((tempcode.item[j-1]='if') or (tempcode.item[j-1]='while') or
+         (tempcode.item[j-1]='for') or (tempcode.item[j-1]='else')
+         or (tempcode.item[j-1]='do') or (tempcode.item[j-1]='switch')) then
+          begin
+           inc(j); bool:=true; continue;
+          end;
+         if(bool=false) and (layer=0) and (layer2=0) then break;
+         if(bool=true) and (layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
          inc(j);
         end;
        tempstr:=c_string_copy_item(tempcode,i,1);
@@ -6483,7 +7295,7 @@ begin
       begin
        if(tempcode.item[j-1]='{') then inc(layer);
        if(tempcode.item[j-1]='}') then dec(layer);
-       if(layer=0) then break;
+       if(layer=0) and (j<tempcode.count) and (tempcode.item[j]='while') then break;
        inc(j);
       end;
      k:=j+2; layer:=0;
@@ -6496,7 +7308,7 @@ begin
       end;
      tempstr:=c_string_copy_item(tempcode,i,1);
      tempstr2:=c_string_copy_item(tempcode,j+1,k-j);
-     tempstr3:=c_string_copy_item(tempcode,i+2,j-i-2);
+     tempstr3:=c_string_copy_item(tempcode,i+1,j-i);
      tempstr4:=tempstr2;
      construct_c_expression(tempstr4,codelist,true);
      if(c_string_search_for_keyword(tempstr4,'?')>0) and
@@ -6515,7 +7327,7 @@ begin
       begin
        if(tempcode.item[j-1]='(') then inc(layer);
        if(tempcode.item[j-1]=')') then dec(layer);
-       if(layer=0) then break;
+       if(layer=0) and (j<tempcode.count) and (tempcode.item[j]='{') then break;
        inc(j);
       end;
      k:=j+1; layer:=0;
@@ -6556,36 +7368,60 @@ begin
     end
    else
     begin
-     j:=i; layer:=0; bool:=false;
+     j:=i; layer:=0; layer2:=0; status:=0;
      while(j<=tempcode.count)do
       begin
-       if(tempcode.item[j-1]='=') then bool:=true;
-       if(tempcode.item[j-1]='enum') then bool:=true;
        if(tempcode.item[j-1]='(') then inc(layer);
        if(tempcode.item[j-1]=')') then dec(layer);
-       if(bool=true) then
+       if(tempcode.item[j-1]='{') then inc(layer2);
+       if(tempcode.item[j-1]='}') then dec(layer2);
+       if(layer=0) and (layer2=0) and (tempcode.item[j-1]='enum') then status:=1;
+       if(layer=0) and (layer2=0) and (tempcode.item[j-1]='=') then status:=2;
+       if(layer>0) and (layer2=0) and (status=1) then status:=0;
+       if(status>0) then
         begin
-         if(layer=0) and (tempcode.item[j-1]=';') then break;
+         if(layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
         end
        else
         begin
-         if(layer=0) and (tempcode.item[j-1]='{') then break
-         else if(layer=0) and (tempcode.item[j-1]=';') then break;
+         if(layer=0) and (layer2=1) and (tempcode.item[j-1]='{') then break
+         else if(layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
         end;
        inc(j);
       end;
-     if(tempcode.item[j-1]=';') then
+     if(j>tempcode.count) then j:=tempcode.count;
+     if(j=tempcode.count) or (tempcode.item[j-1]=';') then
       begin
        tempstr:=c_string_copy_item(tempcode,i,j-i+1);
-       tempstr2.Count:=0;
-       tempstr3.Count:=0;
-       i:=j;
+       if(not c_string_detect_lambda(tempstr)) then bool2:=false else bool2:=true;
+       if(bool2) then
+        begin
+         k:=j-1; layer2:=0;
+         while(k>0)do
+          begin
+           if(tempcode.item[k-1]='{') then dec(layer2);
+           if(tempcode.item[k-1]='}') then inc(layer2);
+           if(layer2=0) then break;
+           dec(k);
+          end;
+         tempstr:=c_string_copy_item(tempcode,i,k-i+1);
+         tempstr2.Count:=0;
+         tempstr3:=c_string_copy_item(tempcode,k+1,j-k-1);
+         i:=j;
+        end
+       else
+        begin
+         tempstr:=c_string_copy_item(tempcode,i,j-i+1);
+         tempstr2.Count:=0;
+         tempstr3.Count:=0;
+         i:=j;
+        end;
       end
      else
       begin
        tempstr:=c_string_copy_item(tempcode,i,j-i);
        k:=j; layer:=0; layer2:=0;
-       if(c_string_check_function(tempstr,1)) then bool:=false else bool:=true;
+       if(c_string_check_function(tempstr)) then bool:=false else bool:=true;
        if(tempstr.count>=1) and (tempstr.item[0]='namespace') and (bool=true) then bool:=false;
        if(tempstr.count=2) and
        (tempstr.item[0]='extern') and ((tempstr.item[1]='"C"') or (tempstr.item[1]=#39'C'#39))
@@ -6605,24 +7441,44 @@ begin
          if(tempcode.item[m-1]='(') then inc(layer2);
          if(tempcode.item[m-1]=')') then dec(layer2);
          if(layer2=0) and (tempcode.item[m-1]=';') then break;
+         if(layer2=0) and (tempcode.item[m-1]='}') then break;
          inc(m);
         end;
+       tempstr4:=tempstr;
+       construct_c_expression(tempstr4,gcodelist,true);
        if(bool) then
         begin
-         tempstr2:=c_string_copy_item(tempcode,k+1,m-k);
-         tempstr3:=c_string_copy_item(tempcode,j+1,k-j-1);
+         if(c_string_compare(tempstr,tempstr4)=true) then
+          begin
+           tempstr2:=c_string_copy_item(tempcode,k+1,m-k);
+           tempstr3:=c_string_copy_item(tempcode,j+1,k-j-1);
+          end
+         else
+          begin
+           tempstr:=c_string_copy_item(tempcode,i,m-i+1);
+           tempstr2.count:=0;
+           tempstr3.count:=0;
+          end;
          i:=m;
         end
        else
         begin
-         tempstr2.count:=0;
+         if(c_string_compare(tempstr,tempstr4)=true) then
+          begin
+           tempstr2.count:=0;
+          end
+         else
+          begin
+           tempstr:=tempstr4;
+           tempstr2.count:=0;
+          end;
          tempstr3:=c_string_copy_item(tempcode,j+1,k-j-1);
          i:=k;
         end;
       end;
     end;
    if(res^.treetype=c_node_class) then
-   tempitem:=construct_c_item(tempstr,tempstr2,codelist,2,1,pack)
+   tempitem:=construct_c_item(tempstr,tempstr2,codelist,1,2,pack)
    else if(res^.treetype=c_node_struct) then
    tempitem:=construct_c_item(tempstr,tempstr2,codelist,1,1,pack)
    else
@@ -6655,8 +7511,7 @@ begin
      Dispose(Pc_unhandled(tempitem.covcontent)); tempitem.covcontent:=nil;
      continue;
     end;
-   if(tempitem.covtype=c_node_define) and (Pc_define(tempitem.covcontent)^.defstate=true)
-   and (Pc_define(tempitem.covcontent)^.defhavevalue=true) then
+   if(tempitem.covtype=c_node_define) and (Pc_define(tempitem.covcontent)^.defstate=true) then
     begin
      inc(codelist.count);
      SetLength(codelist.define,codelist.count);
@@ -6684,10 +7539,11 @@ begin
 end;
 function construct_c_tree(content:string):Pc_tree;
 var i,j,k,m,n,layer,layer2,start,myend:SizeInt;
-    codeseg,bool:boolean;
+    codeseg,bool,bool2:boolean;
     pack:byte;
     tempcode,tempstr,tempstr2,tempstr3,tempstr4:c_string;
     tempitem:cov_item;
+    status:byte=0;
     res:Pc_tree;
 begin
  res:=initialize_c_tree; res^.treetype:=c_node_root;
@@ -6700,10 +7556,12 @@ begin
    start:=i; layer:=0;
    if(tempcode.item[i-1]='#') then
     begin
-     j:=i+1;
+     j:=i+1; layer:=0;
      while(j<=tempcode.count)do
       begin
-       if(tempcode.status[j-1]=2) then break;
+       if(tempcode.item[j-1]='(') then inc(layer);
+       if(tempcode.item[j-1]=')') then dec(layer);
+       if(layer=0) and (tempcode.status[j-1]=2) then break;
        inc(j);
       end;
      tempstr:=c_string_copy_item(tempcode,i,j-i+1);
@@ -6746,6 +7604,8 @@ begin
         begin
          break;
         end;
+       if(layer=0) and (layer2=0) and (k<tempcode.count)
+       and (tempcode.item[k]='}') then break;
        if(k=tempcode.count) then break;
        inc(k);
       end;
@@ -6769,9 +7629,9 @@ begin
        inc(j);
       end;
      tempstr:=c_string_copy_item(tempcode,i,j-i+1);
+     k:=j+1;
      tempstr4:=tempstr;
      construct_c_expression(tempstr4,gcodelist,true);
-     k:=j+1;
      if(tempcode.item[k-1]='{') then
       begin
        layer:=0;
@@ -6787,14 +7647,28 @@ begin
       end
      else
       begin
-       layer:=0; layer2:=0;
+       layer:=0; layer2:=0; bool:=true;
        while(k<=tempcode.count)do
         begin
          if(tempcode.item[k-1]='(') then inc(layer);
          if(tempcode.item[k-1]=')') then dec(layer);
-         if(tempcode.item[k-1]='{') then inc(layer2);
-         if(tempcode.item[k-1]='}') then dec(layer2);
-         if(tempcode.item[k-1]=';') and (layer=0) then break;
+         if(tempcode.item[k-1]='{') then
+          begin
+           if(layer=0) and (layer2=0) and (bool=true) then bool:=false;
+           inc(layer2);
+          end;
+         if(tempcode.item[k-1]='}') then
+          begin
+           dec(layer2);
+          end;
+         if(layer=0) and (layer2=0) and((tempcode.item[k-1]='if') or (tempcode.item[k-1]='while') or
+         (tempcode.item[k-1]='for') or (tempcode.item[k-1]='else')
+         or (tempcode.item[k-1]='do') or (tempcode.item[k-1]='switch')) then
+          begin
+           inc(k); bool:=true; continue;
+          end;
+         if(bool=false) and (layer=0) and (layer2=0) then break;
+         if(bool=true) and (layer=0) and (layer2=0) and (tempcode.item[k-1]=';') then break;
          inc(k);
         end;
        tempstr2.Count:=0;
@@ -6808,21 +7682,6 @@ begin
        tempstr3.Count:=0;
       end;
      i:=k;
-    end
-   else if(tempcode.item[i-1]='template') then
-    begin
-     j:=i+1; layer:=0;
-     while(j<=tempcode.count)do
-      begin
-       if(tempcode.item[j-1]='<') then inc(layer);
-       if(tempcode.item[j-1]='>') then dec(layer);
-       if(layer=0) then break;
-       inc(j);
-      end;
-     tempstr:=c_string_copy_item(tempcode,i,j-i+1);
-     tempstr2.Count:=0;
-     tempstr3.Count:=0;
-     i:=j;
     end
    else if(tempcode.item[i-1]='else') then
     begin
@@ -6842,13 +7701,29 @@ begin
       end
      else
       begin
+       bool:=false;
        while(j<=tempcode.count)do
         begin
          if(tempcode.item[j-1]='(') then inc(layer);
          if(tempcode.item[j-1]=')') then dec(layer);
-         if(tempcode.item[k-1]='{') then inc(layer2);
-         if(tempcode.item[k-1]='}') then dec(layer2);
-         if(layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
+         if(tempcode.item[j-1]='{') then
+          begin
+           if(layer=0) and (layer2=0) and (bool=true) then bool:=false;
+           inc(layer2);
+          end;
+         if(tempcode.item[j-1]='}') then
+          begin
+           dec(layer2);
+          end;
+         if(layer=0) and (layer2=0) and ((tempcode.item[j-1]='if') or (tempcode.item[j-1]='while') or
+         (tempcode.item[j-1]='for') or (tempcode.item[j-1]='else')
+         or (tempcode.item[j-1]='do') or (tempcode.item[j-1]='switch')) then
+          begin
+           inc(j); continue;
+           bool:=true;
+          end;
+         if(bool=false) and (layer=0) and (layer2=0) then break;
+         if(bool=true) and (layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
          inc(j);
         end;
        tempstr:=c_string_copy_item(tempcode,i,1);
@@ -6864,7 +7739,7 @@ begin
       begin
        if(tempcode.item[j-1]='{') then inc(layer);
        if(tempcode.item[j-1]='}') then dec(layer);
-       if(layer=0) then break;
+       if(layer=0) and (j<tempcode.count) and (tempcode.item[j]='while') then break;
        inc(j);
       end;
      k:=j+2; layer:=0;
@@ -6877,7 +7752,7 @@ begin
       end;
      tempstr:=c_string_copy_item(tempcode,i,1);
      tempstr2:=c_string_copy_item(tempcode,j+1,k-j);
-     tempstr3:=c_string_copy_item(tempcode,i+2,j-i-2);
+     tempstr3:=c_string_copy_item(tempcode,i+1,j-i);
      tempstr4:=tempstr2;
      construct_c_expression(tempstr4,gcodelist,true);
      if(c_string_search_for_keyword(tempstr4,'?')>0) and
@@ -6896,7 +7771,7 @@ begin
       begin
        if(tempcode.item[j-1]='(') then inc(layer);
        if(tempcode.item[j-1]=')') then dec(layer);
-       if(layer=0) then break;
+       if(layer=0) and (j<tempcode.count) and (tempcode.item[j]='{') then break;
        inc(j);
       end;
      k:=j+1; layer:=0;
@@ -6937,36 +7812,60 @@ begin
     end
    else
     begin
-     j:=i; layer:=0; bool:=false;
+     j:=i; layer:=0; layer2:=0; status:=0;
      while(j<=tempcode.count)do
       begin
-       if(tempcode.item[j-1]='=') then bool:=true;
-       if(tempcode.item[j-1]='enum') then bool:=true;
        if(tempcode.item[j-1]='(') then inc(layer);
        if(tempcode.item[j-1]=')') then dec(layer);
-       if(bool=true) then
+       if(tempcode.item[j-1]='{') then inc(layer2);
+       if(tempcode.item[j-1]='}') then dec(layer2);
+       if(layer=0) and (layer2=0) and (tempcode.item[j-1]='enum') then status:=1;
+       if(layer=0) and (layer2=0) and (tempcode.item[j-1]='=') then status:=2;
+       if(layer>0) and (layer2=0) and (status=1) then status:=0;
+       if(status>0) then
         begin
-         if(layer=0) and (tempcode.item[j-1]=';') then break;
+         if(layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
         end
        else
         begin
-         if(layer=0) and (tempcode.item[j-1]='{') then break
-         else if(layer=0) and (tempcode.item[j-1]=';') then break;
+         if(layer=0) and (layer2=1) and (tempcode.item[j-1]='{') then break
+         else if(layer=0) and (layer2=0) and (tempcode.item[j-1]=';') then break;
         end;
        inc(j);
       end;
-     if(tempcode.item[j-1]=';') then
+     if(j>tempcode.count) then j:=tempcode.count;
+     if(j=tempcode.count) or (tempcode.item[j-1]=';') then
       begin
        tempstr:=c_string_copy_item(tempcode,i,j-i+1);
-       tempstr2.Count:=0;
-       tempstr3.Count:=0;
-       i:=j;
+       if(not c_string_detect_lambda(tempstr)) then bool2:=false else bool2:=true;
+       if(bool2) then
+        begin
+         k:=j-1; layer2:=0;
+         while(k>0)do
+          begin
+           if(tempcode.item[k-1]='{') then dec(layer2);
+           if(tempcode.item[k-1]='}') then inc(layer2);
+           if(layer2=0) then break;
+           dec(k);
+          end;
+         tempstr:=c_string_copy_item(tempcode,i,k-i+1);
+         tempstr2.Count:=0;
+         tempstr3:=c_string_copy_item(tempcode,k+1,j-k-1);
+         i:=j;
+        end
+       else
+        begin
+         tempstr:=c_string_copy_item(tempcode,i,j-i+1);
+         tempstr2.Count:=0;
+         tempstr3.Count:=0;
+         i:=j;
+        end;
       end
      else
       begin
        tempstr:=c_string_copy_item(tempcode,i,j-i);
        k:=j; layer:=0; layer2:=0;
-       if(c_string_check_function(tempstr,1)) then bool:=false else bool:=true;
+       if(c_string_check_function(tempstr)) then bool:=false else bool:=true;
        if(tempstr.count>=1) and (tempstr.item[0]='namespace') and (bool=true) then bool:=false;
        if(tempstr.count=2) and
        (tempstr.item[0]='extern') and ((tempstr.item[1]='"C"') or (tempstr.item[1]=#39'C'#39))
@@ -6986,17 +7885,37 @@ begin
          if(tempcode.item[m-1]='(') then inc(layer2);
          if(tempcode.item[m-1]=')') then dec(layer2);
          if(layer2=0) and (tempcode.item[m-1]=';') then break;
+         if(layer2=0) and (tempcode.item[m-1]='}') then break;
          inc(m);
         end;
+       tempstr4:=tempstr;
+       construct_c_expression(tempstr4,gcodelist,true);
        if(bool) then
         begin
-         tempstr2:=c_string_copy_item(tempcode,k+1,m-k);
-         tempstr3:=c_string_copy_item(tempcode,j+1,k-j-1);
+         if(c_string_compare(tempstr,tempstr4)=true) then
+          begin
+           tempstr2:=c_string_copy_item(tempcode,k+1,m-k);
+           tempstr3:=c_string_copy_item(tempcode,j+1,k-j-1);
+          end
+         else
+          begin
+           tempstr:=c_string_copy_item(tempcode,i,m-i+1);
+           tempstr2.count:=0;
+           tempstr3.count:=0;
+          end;
          i:=m;
         end
        else
         begin
-         tempstr2.count:=0;
+         if(c_string_compare(tempstr,tempstr4)=true) then
+          begin
+           tempstr2.count:=0;
+          end
+         else
+          begin
+           tempstr:=tempstr4;
+           tempstr2.count:=0;
+          end;
          tempstr3:=c_string_copy_item(tempcode,j+1,k-j-1);
          i:=k;
         end;
@@ -7036,8 +7955,7 @@ begin
      FreeMem(tempitem.covcontent);
      Dispose(Pc_code_seg(tempitem.covcontent)); tempitem.covcontent:=nil;
     end;
-   if(tempitem.covtype=c_node_define) and (Pc_define(tempitem.covcontent)^.defstate=true)
-   and (Pc_define(tempitem.covcontent)^.defhavevalue=true) then
+   if(tempitem.covtype=c_node_define) and (Pc_define(tempitem.covcontent)^.defstate=true) then
     begin
      inc(gcodelist.count);
      SetLength(gcodelist.define,gcodelist.count);
@@ -7499,8 +8417,9 @@ begin
  convert_c_asm_to_pas_asm:=res;
 end;
 function c_type_to_pas_type(const ctype:string):cov_type;
-var i,j,len,count:SizeInt;
+var i,j,layer,len,count:SizeInt;
     tempstr2,tempstr3:string;
+    tempcstr:c_string;
     res:cov_type;
 begin
  len:=length(ctype); i:=len; j:=1; count:=0;
@@ -7596,9 +8515,17 @@ begin
   begin
    tempstr3:='sizeuint';
   end
+ else if(tempstr2='va_list') then
+  begin
+   tempstr3:='PByte';
+  end
  else if(tempstr2='FILE') or (tempstr2='file') then
   begin
    tempstr3:='file';
+  end
+ else if(tempstr2='auto') or (tempstr2='AUTO') then
+  begin
+   tempstr3:='variant';
   end
  else if(copy(tempstr2,1,6)='struct') then
   begin
@@ -7614,28 +8541,44 @@ begin
   end
  else if(tempstr2='void') and (count=1) then
   begin
-   tempstr3:='pointer'; j:=2;
+   tempstr3:='Pointer'; j:=2;
   end
  else if(tempstr2='void') and (count>1) then
   begin
-   tempstr3:='pointer'; j:=2;
+   tempstr3:='Pointer'; j:=2;
   end
  else if(tempstr2='void') and (count<1) then
   begin
    tempstr3:='';
   end
+ else if(tempstr2='typename') then
+  begin
+   tempstr3:=Trim(copy(tempstr2,10,i-9));
+  end
  else
   begin
-   tempstr3:=tempstr2;
-   len:=length(tempstr3);
-   while(i<=len)do
+   tempcstr:=c_string_generate_from_string(tempstr2,true);
+   i:=1; layer:=0;
+   while(i<=tempcstr.count)do
     begin
-     if(copy(tempstr3,i,2)='::') then
+     if(tempcstr.item[i-1]='<') then inc(layer);
+     if(tempcstr.item[i-1]='>') then dec(layer);
+     if(layer>=2) and (tempcstr.item[i-1]='>>') then
       begin
-       delete(tempstr3,i,2); insert('.',tempstr3,i); dec(len); continue;
+       tempcstr.item[i-1]:='>'; c_string_insert_item('>',tempcstr,i+1);
+       dec(layer,2);
       end;
+     if(tempcstr.item[i-1]='::') then tempcstr.item[i-1]:='.';
+     inc(i,1);
+    end;
+   i:=1;
+   while(i<=tempcstr.count)do
+    begin
+     if(i>1) and (tempcstr.item[i-1]='<') then
+     c_string_insert_item('specialize',tempcstr,i-1);
      inc(i);
     end;
+   tempstr3:=c_string_to_string(tempcstr);
   end;
  res.ctype:=tempstr3;
  res.clayer:=count-j+1;
@@ -8300,7 +9243,7 @@ begin
        inc(j);
       end;
     end
-   else if(count>0) and (tempcstr1.item[i-1]<>'*') and (func.name='') then
+   else if(func.layer>=1) and (tempcstr1.item[i-1]<>'*') and (func.name='') then
     begin
      func.name:=tempcstr1.item[i-1]; c_string_delete_item(tempcstr1,i,1); continue;
     end
@@ -8766,12 +9709,16 @@ begin
   end;
  convert_c_func_pointer_to_pas_func_pointer:=res;
 end;
-procedure convert_c_func_to_pas_func(var cexp:c_string);
+function convert_c_func_to_pas_func(const cfunc:c_string):pas_temp;
 var param:cov_func_param;
+    ctype:cov_type;
     i,j,k,layer:SizeInt;
-    tempcstr:c_string;
+    tempstr:string;
+    cexp,tempcstr,tempcstr2:c_string;
+    bool,bool2:boolean;
+    res:pas_temp;
 begin
- i:=1;
+ i:=1; cexp:=cfunc; res.temptypecount:=0;
  while(i<=cexp.count)do
   begin
    if(i<cexp.count) and (c_string_is_operator(cexp.item[i-1],true)=0)
@@ -8788,111 +9735,421 @@ begin
          inc(param.count);
          SetLength(param.param,param.count);
          param.param[param.count-1]:=c_string_copy_item(cexp,k,j-k);
-         if(layer=0) and (cexp.item[j-1]=')') then
-          begin
-           inc(j); continue;
-          end
-         else k:=j+1;
+         if(layer=0) and (cexp.item[j-1]=')') then break else k:=j+1;
         end;
        inc(j);
       end;
-     c_string_delete_item(cexp,i,j-i+1);
-    if(param.funcname='malloc') then
+    bool:=true; bool2:=false;
+    if(param.funcname='malloc') and (param.count=1) then
      begin
       tempcstr:=c_string_generate_from_string('GetMem()',true);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='calloc') then
+    else if(param.funcname='calloc') and (param.count=2) then
      begin
       tempcstr:=c_string_generate_from_string('AllocMem(*)',true);
       c_string_insert_string(param.param[1],tempcstr,4);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='realloc') then
+    else if(param.funcname='realloc') and (param.count=2) then
      begin
       tempcstr:=c_string_generate_from_string('ReallocMem(,)',true);
       c_string_insert_string(param.param[1],tempcstr,4);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='free') then
+    else if(param.funcname='free') and (param.count=1) then
      begin
       tempcstr:=c_string_generate_from_string('FreeMem()',true);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='memset') then
+    else if(param.funcname='memset') and (param.count=3) then
      begin
       tempcstr:=c_string_generate_from_string('FillChar(^,,)',true);
       c_string_insert_string(param.param[1],tempcstr,6);
       c_string_insert_string(param.param[2],tempcstr,5);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='memcpy') then
+    else if(param.funcname='memcpy') and (param.count=3) then
      begin
       tempcstr:=c_string_generate_from_string('Move(^,^,)',true);
       c_string_insert_string(param.param[2],tempcstr,7);
       c_string_insert_string(param.param[0],tempcstr,5);
       c_string_insert_string(param.param[1],tempcstr,3);
      end
-    else if(param.funcname='memmove') then
+    else if(param.funcname='memmove') and (param.count=3) then
      begin
       tempcstr:=c_string_generate_from_string('Move(^,^,)',true);
       c_string_insert_string(param.param[2],tempcstr,7);
       c_string_insert_string(param.param[0],tempcstr,5);
       c_string_insert_string(param.param[1],tempcstr,3);
      end
-    else if(param.funcname='strcpy') then
+    else if(param.funcname='strcpy') and (param.count=2) then
      begin
       tempcstr:=c_string_generate_from_string('StrCopy(,)',true);
       c_string_insert_string(param.param[1],tempcstr,4);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='strncpy') then
+    else if(param.funcname='strncpy') and (param.count=3) then
      begin
       tempcstr:=c_string_generate_from_string('StrLCopy(,,)',true);
       c_string_insert_string(param.param[2],tempcstr,5);
       c_string_insert_string(param.param[1],tempcstr,4);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='strcat') then
+    else if(param.funcname='strcat') and (param.count=2) then
      begin
       tempcstr:=c_string_generate_from_string('StrCat(,)',true);
       c_string_insert_string(param.param[1],tempcstr,4);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='strncat') then
+    else if(param.funcname='strncat') and (param.count=3) then
      begin
       tempcstr:=c_string_generate_from_string('StrLCat(,,)',true);
       c_string_insert_string(param.param[2],tempcstr,5);
       c_string_insert_string(param.param[1],tempcstr,4);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='strcmp') then
+    else if(param.funcname='strcmp') and (param.count=2) then
      begin
       tempcstr:=c_string_generate_from_string('StrComp(,)',true);
       c_string_insert_string(param.param[1],tempcstr,4);
       c_string_insert_string(param.param[0],tempcstr,3);
      end
-    else if(param.funcname='memcmp') then
+     else if(param.funcname='strncmp') and (param.count=2) then
+     begin
+      tempcstr:=c_string_generate_from_string('StrLComp(,)',true);
+      c_string_insert_string(param.param[1],tempcstr,4);
+      c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='memcmp') and (param.count=2) then
      begin
       tempcstr:=c_string_generate_from_string('CompareByte(^,^,)',true);
       c_string_insert_string(param.param[2],tempcstr,7);
       c_string_insert_string(param.param[1],tempcstr,5);
       c_string_insert_string(param.param[0],tempcstr,3);
+     end
+    else if(param.funcname='new') then
+     begin
+      tempcstr:=c_string_generate_from_string('New()',true);
+      tempcstr2:=c_string_copy_item(cexp,1,i-1);
+      j:=2; layer:=0;
+      while(j<=tempcstr2.count)do
+       begin
+        if(tempcstr2.item[j-1]='[') then inc(layer);
+        if(tempcstr2.item[j-1]=']') then
+         begin
+          dec(layer); c_string_delete_item(tempcstr2,2,j-1);
+         end;
+        inc(j);
+       end;
+      c_string_insert_string(tempcstr2,tempcstr,3);
+     end
+    else if(param.funcname='delete') then
+     begin
+      tempcstr:=c_string_generate_from_string('Dispose()',true);
+      tempcstr2:=param.param[0];
+      j:=1; layer:=0;
+      while(j<=tempcstr2.count)do
+       begin
+        if(tempcstr2.item[j-1]='[') then inc(layer);
+        if(tempcstr2.item[j-1]=']') then
+         begin
+          dec(layer); c_string_delete_item(tempcstr2,1,j);
+         end;
+        inc(j);
+       end;
+      c_string_insert_string(tempcstr2,tempcstr,3);
+     end
+    else if(param.funcname='begin') then
+     begin
+      tempcstr:=c_string_generate_from_string('Low()',true);
+      j:=i-2; layer:=0;
+      while(j>0)do
+       begin
+        if(cexp.item[j-1]='(') then dec(layer);
+        if(cexp.item[j-1]=')') then inc(layer);
+        if(layer=0) and (cexp.item[j-1]='^') then break;
+        dec(j);
+       end;
+      tempcstr2:=c_string_copy_item(cexp,j,i-j-1);
+      c_string_insert_string(tempcstr2,tempcstr,3);
+      c_string_delete_item(cexp,j,i-j+3);
+      bool2:=true;
+     end
+    else if(param.funcname='end') then
+     begin
+      tempcstr:=c_string_generate_from_string('High()',true);
+      j:=i-2; layer:=0;
+      while(j>0)do
+       begin
+        if(cexp.item[j-1]='(') then dec(layer);
+        if(cexp.item[j-1]=')') then inc(layer);
+        if(layer=0) and (cexp.item[j-1]='^') then break;
+        dec(j);
+       end;
+      tempcstr2:=c_string_copy_item(cexp,j,i-j-1);
+      c_string_insert_string(tempcstr2,tempcstr,3);
+      c_string_delete_item(cexp,j,i-j+3);
+      bool2:=true;
+     end
+    else if(param.funcname='va_begin') then
+     begin
+      tempcstr:=c_string_generate_from_string(':=@param',true);
+      c_string_insert_string(param.param[0],tempcstr,1);
+     end
+    else if(param.funcname='va_end') then
+     begin
+      cexp.count:=0; break;
+     end
+    else if(param.funcname='va_arg') then
+     begin
+      tempcstr:=c_string_generate_from_string('inc(,sizeof())',true);
+      ctype:=c_type_to_pas_type(c_string_to_string(param.param[1]));
+      tempstr:=ctype.ctype;
+      for k:=1 to ctype.clayer do
+       begin
+        inc(res.temptypecount);
+        SetLength(res.temptype,res.temptypecount);
+        res.temptype[res.temptypecount-1].newname:='P'+tempstr;
+        res.temptype[res.temptypecount-1].oldname:=
+        c_string_generate_from_string('^'+tempstr,true);
+        tempstr:='P'+tempstr;
+       end;
+      c_string_insert_item(tempstr,tempcstr,tempcstr.count-1);
+      c_string_insert_string(param.param[0],tempcstr,1);
+     end
+    else bool:=false;
+    if(bool=true) and (bool2=false) then
+     begin
+      c_string_delete_item(cexp,i,j-i+1);
+      c_string_insert_string(tempcstr,cexp,i);
      end;
-    c_string_insert_string(tempcstr,cexp,i);
-    inc(i); continue;
+    inc(i,1); continue;
    end;
   inc(i);
  end;
+ res.exp:=cexp;
+ convert_c_func_to_pas_func:=res;
 end;
-function convert_c_expression_to_pas_expression(const cexp:c_string):pas_temp;
-var i,j,k,m,n,l,layer,layer2:SizeInt;
+function convert_c_generic_to_pas_generic(const cgen:c_string):pas_temp;
+var i,j,k,m,n,l,r,layer:SizeInt;
+    tempexp,tempcstr:c_string;
+    tempstr,tempstr2:string;
+    cposlist:cov_pos_list;
+    ctype:cov_type;
+    res:pas_temp;
+begin
+ tempexp:=cgen;
+ i:=1; layer:=0; cposlist.count:=0; res.temptypecount:=0;
+ while(i<=tempexp.count)do
+  begin
+   if(tempexp.item[i-1]='<') or (tempexp.item[i-1]='>') or (tempexp.item[i-1]='>>') then
+    begin
+     inc(cposlist.count);
+     SetLength(cposlist.item,cposlist.count);
+     if(tempexp.item[i-1]='<') then
+      begin
+       cposlist.item[cposlist.count-1]:=1;
+      end
+     else if(tempexp.item[i-1]='>') then
+      begin
+       cposlist.item[cposlist.count-1]:=2;
+      end
+     else if(tempexp.item[i-1]='>>') then
+      begin
+       cposlist.item[cposlist.count-1]:=3;
+      end;
+    end;
+   inc(i);
+  end;
+ i:=1; j:=1;
+ while(i<=cposlist.count)do
+  begin
+   if(cposlist.item[i-1]=1) then
+    begin
+     j:=i+1; k:=cposlist.item[i-1]+1; layer:=1;
+     while(j<=cposlist.count)do
+      begin
+       if(cposlist.item[j-1]<=1) then inc(layer);
+       if(cposlist.item[j-1]=2) then dec(layer);
+       if(layer>=2) and (cposlist.item[j-1]=3) then
+        begin
+         dec(layer,2);
+         tempexp.item[j-1]:='>';
+         c_string_insert_item('>',tempexp,j+1);
+         insert(cposlist.item[j-1]+1,cposlist.item,j);
+         inc(cposlist.count);
+         m:=j+2;
+         while(m<=cposlist.count)do
+          begin
+           inc(cposlist.item[m-1]);
+           inc(m);
+          end;
+        end;
+       if(layer=0) then break;
+       inc(j);
+      end;
+     if(j>cposlist.count) then break;
+     m:=cposlist.item[j-1]-1; n:=k;
+     while(n<=m) do
+      begin
+       if(c_string_is_operator(tempexp.item[n-1])>0) and
+       (tempexp.item[n-1]<>'<') and (tempexp.item[n-1]<>'>>')
+       and (tempexp.item[n-1]<>'>') and (tempexp.item[n-1]<>'*') then break;
+       if(tempexp.item[n-1]='(') or (tempexp.item[n-1]=')') or
+       (tempexp.item[n-1]='[') or (tempexp.item[n-1]=']') then break;
+       inc(n);
+      end;
+     if(n<=m) then
+      begin
+       i:=j+1; continue;
+      end
+     else
+      begin
+       n:=k; l:=k; layer:=0;
+       while(n<=m)do
+        begin
+         if(tempexp.item[n-1]='<') then inc(layer);
+         if(tempexp.item[n-1]='>') then dec(layer);
+         if(tempexp.item[n-1]='>>') and (layer>=2) then dec(layer,2);
+         if((layer=0) and (tempexp.item[n-1]=',')) or (n=m) then
+          begin
+           tempcstr:=c_string_copy_item(tempexp,l,n-l);
+           r:=1;
+           while(r<=tempcstr.count)do
+            begin
+             if(tempcstr.item[r-1]='const') or (tempcstr.item[r-1]='CONST') then
+              begin
+               c_string_delete_item(tempcstr,r,1); continue;
+              end
+             else if(tempcstr.item[r-1]='register') or (tempcstr.item[r-1]='REGISTER') then
+              begin
+               c_string_delete_item(tempcstr,r,1); continue;
+              end
+             else if(tempcstr.item[r-1]='static') or (tempcstr.item[r-1]='STATIC') then
+              begin
+               c_string_delete_item(tempcstr,r,1); continue;
+              end
+             else if(tempcstr.item[r-1]='constexpr') or (tempcstr.item[r-1]='CONSTEXPR') then
+              begin
+               c_string_delete_item(tempcstr,r,1); continue;
+              end;
+             inc(r);
+            end;
+           tempstr:=c_string_to_string(tempcstr);
+           ctype:=c_type_to_pas_type(tempstr);
+           tempstr2:=ctype.ctype;
+           r:=1;
+           while(r<=ctype.clayer)do
+            begin
+             inc(res.temptypecount);
+             SetLength(res.temptype,res.temptypecount);
+             res.temptype[res.temptypecount-1].newname:='P'+tempstr2;
+             res.temptype[res.temptypecount-1].oldname:=
+             c_string_generate_from_string('^'+tempstr2,true);
+             tempstr2:='P'+tempstr2;
+             inc(r);
+            end;
+           c_string_delete_item(tempcstr,l,n-l);
+           for r:=i to cposlist.count do dec(cposlist.item[r-1],n-l-1);
+           c_string_insert_item(tempstr2,tempcstr,l);
+           l:=n+1;
+          end;
+         inc(n);
+        end;
+       if(l>1) then c_string_insert_item('specialize',tempexp,l-1);
+       for r:=i to cposlist.count do inc(cposlist.item[r-1]);
+      end;
+    end;
+   inc(i);
+  end;
+ res.exp:=tempexp;
+ convert_c_generic_to_pas_generic:=res;
+end;
+function convert_c_lambda_to_pas_lambda(const cc:c_string;pastree:Ppas_tree=nil):c_string;
+var i,j,k,layer:SizeInt;
+    treelist:pas_tree_list;
+    tempcstr:c_string;
+    lambdafunc:cov_func_param;
+    tempcc:c_string;
+begin
+ i:=1; treelist.count:=0;
+ if(pastree=nil) then exit(cc);
+ for i:=1 to pastree^.count do
+  begin
+   if((pastree^.child+i-1)^.treetype=pas_node_function)
+   and (Ppas_function((pastree^.child+i-1)^.content)^.islambda) then
+    begin
+     inc(treelist.count);
+     SetLength(treelist.tree,treelist.count);
+     treelist.tree[treelist.count-1]:=pastree^.child+i-1;
+    end;
+  end;
+ if(treelist.count=0) then exit(cc);
+ tempcc:=cc; lambdafunc.count:=0;
+ while(i<=cc.count)do
+  begin
+   if(c_string_is_operator(tempcc.item[i-1])=0) and (tempcc.item[i-1]='(') then
+    begin
+     k:=treelist.count; lambdafunc.funcname:=tempcc.item[i-1];
+     while(k>0)do
+      begin
+       if(lambdafunc.funcname=Ppas_function(treelist.tree[k-1]^.content)^.funcname) then break;
+       dec(k);
+      end;
+     if(k=0) then
+      begin
+       inc(i); continue;
+      end;
+     j:=i+2; layer:=0;
+     while(j<=tempcc.count)do
+      begin
+       if(tempcc.item[j-1]='(') then inc(layer);
+       if(tempcc.item[j-1]=')') then dec(layer);
+       if((layer=1) and (tempcc.item[j-1]=',')) or ((layer=0) and (tempcc.item[j-1]=')')) then
+        begin
+         inc(lambdafunc.count);
+         SetLength(lambdafunc.param,lambdafunc.count);
+         lambdafunc.param[lambdafunc.count-1]:=c_string_copy_item(tempcc,j,i-j);
+        end;
+       inc(j);
+      end;
+     c_string_delete_item(tempcc,i,j-i+1);
+     j:=Ppas_function(treelist.tree[k-1]^.content)^.paramcaptureindex+1;
+     while(j<=Ppas_function(treelist.tree[k-1]^.content)^.paramcount)do
+      begin
+       inc(lambdafunc.count);
+       SetLength(lambdafunc.param,lambdafunc.count);
+       if(Ppas_function(treelist.tree[k-1]^.content)^.param[j-1].item[0]<>'var') then
+       lambdafunc.param[lambdafunc.count-1]:=
+       c_string_generate_from_string(
+       Ppas_function(treelist.tree[k-1]^.content)^.param[j-1].item[0],true)
+       else
+       lambdafunc.param[lambdafunc.count-1]:=
+       c_string_generate_from_string(
+       Ppas_function(treelist.tree[k-1]^.content)^.param[j-1].item[1],true);
+      end;
+     tempcstr:=c_string_generate_from_string(lambdafunc.funcname+'()',true);
+     j:=1;
+     for j:=1 to lambdafunc.count do
+      begin
+       c_string_insert_string(lambdafunc.param[j-1],tempcstr,tempcstr.count);
+       if(j<lambdafunc.count) then c_string_insert_item(';',tempcstr,tempcstr.count);
+      end;
+     c_string_insert_string(tempcstr,tempcc,i);
+    end;
+   inc(i);
+  end;
+ convert_c_lambda_to_pas_lambda:=tempcc;
+end;
+function convert_c_expression_to_pas_expression(const cexp:c_string;pastree:Ppas_tree=nil):pas_temp;
+var i,j,k,m,n,l,r,layer,layer2:SizeInt;
     tempexp,tempcstr,tempcstr1,tempcstr2,tempcstr3:c_string;
     tempstr,tempstr2:string;
     ioparam:cov_io_param;
     covtype:cov_type;
     tempres,res:pas_temp;
-    bool,lineswap:boolean;
+    bool:boolean;
 begin
  i:=1; j:=1;
  tempres.formercount:=0; tempres.lattercount:=0; tempres.temptypecount:=0;
@@ -8917,7 +10174,7 @@ begin
  if(tempexp.item[0]='cout') or (tempexp.item[0]='cin') then
   begin
    if(tempexp.item[0]='cout') then bool:=true else bool:=false;
-   i:=2; j:=2; lineswap:=false;
+   i:=2; j:=2;
    ioparam.count:=0; SetLength(ioparam.item,0);
    layer:=0;
    while(i<=tempexp.count)do
@@ -8957,6 +10214,28 @@ begin
      inc(i);
     end;
   end;
+ {Handle the new and delete procedure}
+ i:=1;
+ while(i<tempexp.count)do
+  begin
+   if(tempexp.item[i-1]='new') or (tempexp.item[i-1]='delete') then
+    begin
+     c_string_insert_item(')',tempexp,tempexp.count+1);
+     c_string_insert_item('(',tempexp,i+1);
+     c_string_delete_unnecessary_bracket(tempexp,true);
+     inc(i,2); continue;
+    end;
+   inc(i);
+  end;
+ {Handle the generic class}
+ tempres:=convert_c_generic_to_pas_generic(tempexp);
+ for i:=1 to tempres.temptypecount do
+  begin
+   inc(res.temptypecount);
+   SetLength(res.temptype,res.temptypecount);
+   res.temptype[res.temptypecount-1]:=tempres.temptype[i-1];
+  end;
+ tempexp:=tempres.exp;
  {Handle the type convertion or function pointer convertion}
  i:=1; j:=0; k:=0; bool:=false; layer:=0;
  while(i<=tempexp.count)do
@@ -9635,7 +10914,7 @@ begin
       begin
        tempcstr1:=c_string_copy_item(tempexp,i+1,k-i);
        tempcstr2:=c_string_generate_from_string('inc()',true);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1,pastree);
        m:=1;
        while(m<=tempres.temptypecount) do
         begin
@@ -9665,7 +10944,7 @@ begin
      else if(k-i<=0) then
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1,pastree);
        tempcstr2:=c_string_generate_from_string('inc()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9696,7 +10975,7 @@ begin
      else
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1,pastree);
        tempcstr2:=c_string_generate_from_string('inc()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9725,6 +11004,7 @@ begin
        res.latterexp[res.lattercount-1]:=tempcstr2;
       end;
      c_string_delete_item(tempexp,i,1);
+     if(tempexp.count=1) then c_string_delete_item(tempexp,1,1);
     end
    else if(tempexp.item[i-1]='--') then
     begin
@@ -9777,7 +11057,7 @@ begin
       begin
        tempcstr1:=c_string_copy_item(tempexp,i+1,k-i);
        tempcstr2:=c_string_generate_from_string('dec()',true);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1,pastree);
        m:=1;
        while(m<=tempres.temptypecount) do
         begin
@@ -9807,7 +11087,7 @@ begin
      else if(k-i<=0) then
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1,pastree);
        tempcstr2:=c_string_generate_from_string('dec()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9838,7 +11118,7 @@ begin
      else
       begin
        tempcstr1:=c_string_copy_item(tempexp,j,i-j);
-       tempres:=convert_c_expression_to_pas_expression(tempcstr1);
+       tempres:=convert_c_expression_to_pas_expression(tempcstr1,pastree);
        tempcstr2:=c_string_generate_from_string('dec()',true);
        m:=1;
        while(m<=tempres.temptypecount) do
@@ -9867,6 +11147,7 @@ begin
        res.latterexp[res.lattercount-1]:=tempcstr2;
       end;
      c_string_delete_item(tempexp,i,1);
+     if(tempexp.count=1) then c_string_delete_item(tempexp,1,1);
     end
    else if(tempexp.item[i-1]='::') then
     begin
@@ -10036,6 +11317,37 @@ begin
      c_string_delete_item(tempexp,i,1);
      c_string_insert_item('=',tempexp,i);
     end
+   else if(i>1) and (i<tempexp.count) and (tempexp.item[i-2]='0')
+   and (tempexp.item[i]='1') then
+    begin
+     c_string_delete_item(tempexp,i-1,3);
+     c_string_insert_item('False',tempexp,i);
+    end
+   else if(i>1) and (i<tempexp.count) and (tempexp.item[i-2]='1')
+   and (tempexp.item[i]='0') then
+    begin
+     c_string_delete_item(tempexp,i-1,3);
+     c_string_insert_item('False',tempexp,i);
+    end
+   else if(i>1) and (i<tempexp.count) and (tempexp.item[i-2]='0')
+   and (tempexp.item[i]='0') then
+    begin
+     c_string_delete_item(tempexp,i-1,3);
+     c_string_insert_item('True',tempexp,i);
+    end
+   else if(i>1) and (i<tempexp.count) and (tempexp.item[i-2]='1')
+   and (tempexp.item[i]='1') then
+    begin
+     c_string_delete_item(tempexp,i-1,3);
+     c_string_insert_item('True',tempexp,i);
+    end
+   else if(tempexp.item[i-1]='->') then
+    begin
+     c_string_delete_item(tempexp,i,1);
+     tempcstr:=c_string_generate_from_string('^.',true);
+     c_string_insert_string(tempcstr,tempexp,i);
+     inc(i,2); continue;
+    end
    else if(tempexp.item[i-1]='&') then
     begin
      if(i>1) and (c_string_is_operator(tempexp.item[i-2],true)=0) then
@@ -10048,10 +11360,6 @@ begin
        c_string_delete_item(tempexp,i,1);
        c_string_insert_item('@',tempexp,i);
       end;
-    end
-   else if(tempexp.item[i-1]='/') then
-    begin
-
     end
    else if(tempexp.item[i-1]='*') then
     begin
@@ -10169,13 +11477,24 @@ begin
    inc(i);
   end;
  res.exp:=tempexp;
- if(plizefunc=true) then convert_c_func_to_pas_func(res.exp);
- c_string_delete_unnecessary_bracket(res.exp);
+ if(plizefunc=true) then
+  begin
+   tempres:=convert_c_func_to_pas_func(res.exp);
+   for i:=1 to tempres.temptypecount do
+    begin
+     inc(res.temptypecount);
+     SetLength(res.temptype,res.temptypecount);
+     res.temptype[res.temptypecount-1]:=tempres.temptype[i-1];
+    end;
+   res.exp:=tempres.exp;
+  end;
+ if(pastree<>nil) then convert_c_lambda_to_pas_lambda(res.exp,pastree);
+ c_string_delete_unnecessary_bracket(res.exp,true);
  convert_c_expression_to_pas_expression:=res;
 end;
-function convert_c_ifdef_condition_to_pas(cc:c_string):pas_temp;
+function convert_c_ifdef_condition_to_pas(cc:c_string;pastree:Ppas_tree=nil):pas_temp;
 begin
- convert_c_ifdef_condition_to_pas:=convert_c_expression_to_pas_expression(cc);
+ convert_c_ifdef_condition_to_pas:=convert_c_expression_to_pas_expression(cc,pastree);
 end;
 function convert_c_number_to_pas_number(cnum:string):string;
 var i:SizeInt;
@@ -10256,7 +11575,7 @@ begin
   end;
  if(maxlayer=0) then
   begin
-   value:=convert_c_expression_to_pas_expression(value).exp;
+   value:=convert_c_expression_to_pas_expression(value,pastree).exp;
    res.arrc:=0;
    if(value.count=1) and (Copy(value.item[0],1,1)=#39) then
     begin
@@ -10354,6 +11673,7 @@ begin
    if(temptree^.treetype=pas_node_record) and (Ppas_record(temptree^.content)^.recordname=pastype) then
     begin
      m:=1;
+     if(m>temptree^.count) then goto l3;
      l2:
      temptree2:=temptree^.child+m-1;
      if(temptree2^.treetype<>pas_node_member) then goto l3
@@ -10392,7 +11712,7 @@ begin
           end
          else
           begin
-           tempcstr2:=convert_c_expression_to_pas_expression(tempcstr).exp;
+           tempcstr2:=convert_c_expression_to_pas_expression(tempcstr,pastree).exp;
            c_string_insert_string(tempcstr2,tempcstr3,tempcstr3.count+1);
           end;
          c_string_insert_string(tempcstr3,value,k);
@@ -10417,7 +11737,7 @@ begin
           end
          else
           begin
-           tempcstr2:=convert_c_expression_to_pas_expression(tempcstr).exp;
+           tempcstr2:=convert_c_expression_to_pas_expression(tempcstr,pastree).exp;
            c_string_insert_string(tempcstr2,tempcstr3,tempcstr3.count+1);
           end;
          c_string_insert_string(tempcstr3,value,k);
@@ -10487,6 +11807,42 @@ begin
    inc(i);
   end;
  convert_c_value_to_pas_value:=res;
+end;
+function convert_c_init_to_pas_expression(cinit:c_string;pastree:Ppas_tree=nil):pas_temp;
+var i,j,layer:SizeInt;
+    tempinit:c_string;
+    res:pas_temp;
+begin
+ tempinit:=cinit; i:=1; j:=1; layer:=0;
+ res.formercount:=0;
+ while(i<=tempinit.count)do
+  begin
+   if(tempinit.item[i-1]='(') then inc(layer);
+   if(tempinit.item[i-1]=')') then dec(layer);
+   if(tempinit.item[i-1]=',') and (layer=0) then
+    begin
+     inc(res.formercount);
+     SetLength(res.formerexp,res.formercount);
+     res.formerexp[res.formercount-1]:=
+     convert_c_expression_to_pas_expression(c_string_copy_item(tempinit,j,i-j),pastree).exp;
+     j:=i+1;
+    end
+   else if(i=tempinit.count) then
+    begin
+     res.exp:=convert_c_expression_to_pas_expression(c_string_copy_item(tempinit,j,i-j+1),pastree).exp;
+    end;
+   inc(i);
+  end;
+ i:=1;
+ while(i<=res.formercount)do
+  begin
+   c_string_insert_item(':=',res.formerexp[i-1],2);
+   c_string_delete_unnecessary_bracket(res.formerexp[i-1],true);
+   inc(i);
+  end;
+ c_string_insert_item(':=',res.exp,2);
+ c_string_delete_unnecessary_bracket(res.exp,true);
+ convert_c_init_to_pas_expression:=res;
 end;
 function convert_c_statement_to_pas_statement(cstate:c_string;pastree:Ppas_tree):pas_temp;
 var i,j,k,m,n,count,layer:SizeInt;
@@ -10599,7 +11955,7 @@ begin
   end
  else
   begin
-   res:=convert_c_expression_to_pas_expression(cstate);
+   res:=convert_c_expression_to_pas_expression(cstate,pastree);
   end;
  convert_c_statement_to_pas_statement:=res;
 end;
@@ -10635,12 +11991,12 @@ begin
   end;
 end;
 function convert_c_tree_to_pas_tree(ctree:Pc_tree;pastree:Ppas_tree=nil):Ppas_tree;
-var i,j,k,m,n,l,r,count,ii,len,layer,layer2:SizeInt;
+var i,j,k,m,n,l,r,a,b,count,ii,ii2,ii3,len,len1,len2,len3,layer,layer2:SizeInt;
     paramindex:SizeInt=0;
     tempnum:SizeInt;
-    tempstr,tempstr2,tempstr3,tempstr5,tempstr6:string;
+    tempstr,tempstr2,tempstr3,tempstr5,tempstr6,tempstr7,tempstr8:string;
     temppas:pas_temp;
-    tempcstr,tempcstr2,tempcstr3,tempcstr4,tempcstr6:c_string;
+    tempcstr,tempcstr2,tempcstr3,tempcstr4,tempcstr6,tempcstr7,tempcstr8:c_string;
     ctype:cov_type;
     orgtree,orgtree2:Pc_tree;
     res,tempres:Ppas_tree;
@@ -10667,7 +12023,10 @@ var i,j,k,m,n,l,r,count,ii,len,layer,layer2:SizeInt;
     memstate:Ppas_member;
     defstate:Ppas_define;
     covarr:cov_array_dimension;
-label l1,l2;
+{For lambda expression handling}
+    strlist:c_string_list;
+    bool1,bool2:boolean;
+label l1,l2,l3,l4,l5;
 begin
  if(pastree=nil) then
   begin
@@ -10700,7 +12059,7 @@ begin
   begin
    New(loopstate);
    loopstate^.looptype:=2;
-   loopstate^.condition:=c_string_generate_from_string('(False)',true);
+   loopstate^.condition:=c_string_generate_from_string('False',true);
    pas_tree_add_item(res,pas_node_loop_statement,loopstate,false);
    convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
   end
@@ -10713,16 +12072,48 @@ begin
    while(orgtree2^.parent<>nil) and (orgtree2^.treetype<>c_node_switch) do orgtree2:=orgtree2^.parent;
    tempcstr:=Pc_switch(orgtree2^.content)^.exp;
    tempcstr2:=Pc_switch_case(orgtree^.content)^.constexp;
-   tempcstr3:=c_string_generate_from_string('(==)',false);
-   c_string_insert_string(tempcstr2,tempcstr3,3);
-   c_string_insert_string(tempcstr,tempcstr3,2);
-   ifstate^.condition:=convert_c_expression_to_pas_expression(tempcstr3).exp;
+   tempcstr3:=c_string_generate_from_string('==',false);
+   c_string_insert_string(tempcstr2,tempcstr3,2);
+   c_string_insert_string(tempcstr,tempcstr3,1);
+   ifstate^.condition:=convert_c_expression_to_pas_expression(tempcstr3,res).exp;
    pas_tree_add_item(res,pas_node_if_statement,ifstate,false);
    convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
   end
  else if(orgtree^.treetype=c_node_class) then
   begin
    New(classstate);
+   classstate^.isgeneric:=Pc_class(orgtree^.content)^.generichave;
+   classstate^.genericcount:=0;
+   i:=1;
+   if(classstate^.isgeneric=true) then
+    begin
+      len1:=Pc_class(orgtree^.content)^.genericcount;
+      len2:=Pc_class(orgtree^.content)^.genericspeccount;
+      len3:=Max(len1,len2);
+      while(i<=len3) do
+       begin
+        if(i>len1) then tempcstr.count:=0
+        else tempcstr:=Pc_class(orgtree^.content)^.genericitem[i-1];
+        if(i>len2) then tempcstr2.count:=0
+        else tempcstr2:=Pc_class(orgtree^.content)^.genericspec[i-1];
+        if(tempcstr2.count>0) then tempstr:=c_string_to_string(tempcstr2,false)
+        else tempstr:=c_string_to_string(tempcstr,false);
+        ctype:=c_type_to_pas_type(tempstr);
+        tempstr2:=ctype.ctype; j:=1;
+        while(j<=ctype.clayer)do
+         begin
+          New(typestate);
+          typestate^.newname:='P'+tempstr2;
+          typestate^.oldname:=c_string_generate_from_string('^'+tempstr2,true);
+          pas_tree_add_item(res,pas_node_type,typestate,false);
+          inc(j);
+         end;
+        inc(classstate^.genericcount);
+        SetLength(classstate^.generictype,classstate^.genericcount);
+        classstate^.generictype[classstate^.genericcount-1]:=tempstr2;
+        inc(i);
+       end;
+    end;
    classstate^.classname:=Pc_class(orgtree^.content)^.classname;
    classstate^.inheritcount:=Pc_class(orgtree^.content)^.inheritcount;
    i:=1; len:=Pc_class(orgtree^.content)^.inheritcount;
@@ -10986,7 +12377,7 @@ begin
   end
  else if(orgtree^.treetype=c_node_expression) then
   begin
-   temppas:=convert_c_expression_to_pas_expression(Pc_expression(orgtree^.content)^.content);
+   temppas:=convert_c_expression_to_pas_expression(Pc_expression(orgtree^.content)^.content,res);
    i:=1;
    while(i<=temppas.temptypecount) do
     begin
@@ -11082,12 +12473,141 @@ begin
        opestate^.ext:=true; opestate^.resulttype:='';
        opestate^.isvirtual:=false; opestate^.isoverride:=false;
        opestate^.signname:=''; opestate^.ext:=true;
+       opestate^.isgeneric:=false; opestate^.genericcount:=0;
        paramindex:=0;
        tempcstr3:=tempcstr2;
        m:=1;
        while(m<=tempcstr3.Count)do
         begin
-         if(tempcstr3.item[m-1]='static') then
+         if(tempcstr3.item[m-1]='template') then
+          begin
+           opestate^.isgeneric:=true;
+           n:=m+2; l:=m+2; layer:=0;
+           while(n<=tempcstr3.count)do
+            begin
+             if(tempcstr3.item[n-1]='<') then inc(layer);
+             if(tempcstr3.item[n-1]='>') then dec(layer);
+             if((layer=1) and (tempcstr3.item[n-1]=','))
+             or((layer=0) and (tempcstr3.item[n-1]='>')) then
+              begin
+               tempcstr4:=c_string_copy_item(tempcstr3,l,n-l);
+               r:=1; l:=n+1;
+               while(r<=tempcstr4.count)do
+                begin
+                 if(tempcstr4.item[r-1]='const') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='register') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='static') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='constexpr') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end;
+                 inc(r);
+                end;
+               if(tempcstr4.item[0]='typename') then
+                begin
+                 c_string_delete_item(tempcstr4,1,1);
+                end
+               else
+                begin
+                 c_string_delete_item(tempcstr4,tempcstr4.count,1);
+                end;
+               tempstr2:=c_string_to_string(tempcstr4);
+               ctype:=c_type_to_pas_type(tempstr2);
+               tempstr3:=ctype.ctype; r:=1;
+               while(r<=ctype.clayer)do
+                begin
+                 New(typestate);
+                 typestate^.newname:='P'+tempstr3;
+                 typestate^.oldname:=
+                 c_string_generate_from_string('^'+tempstr3,true);
+                 tempstr3:='P'+tempstr3;
+                 inc(r);
+                end;
+               inc(opestate^.genericcount);
+               SetLength(opestate^.generictype,opestate^.genericcount);
+               opestate^.generictype[opestate^.genericcount-1]:=tempstr3;
+              end;
+             inc(n);
+            end;
+           c_string_delete_item(tempcstr3,m,l-m+1); continue;
+          end
+         else if(tempcstr3.item[m-1]='<') then
+          begin
+           n:=m+1; l:=m+1; layer:=0; a:=0;
+           while(n<=tempcstr3.count)do
+            begin
+             if(tempcstr3.item[n-1]='<') then inc(layer);
+             if(tempcstr3.item[n-1]='>') then dec(layer);
+             if((layer=1) and (tempcstr3.item[n-1]=','))
+             or((layer=0) and (tempcstr3.item[n-1]='>')) then
+              begin
+               tempcstr4:=c_string_copy_item(tempcstr3,l,n-l);
+               r:=1; l:=n+1; inc(a);
+               while(r<=tempcstr4.count)do
+                begin
+                 if(tempcstr4.item[r-1]='const') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='register') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='static') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='constexpr') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end;
+                 inc(r);
+                end;
+               if(tempcstr4.item[0]='typename') then
+                begin
+                 c_string_delete_item(tempcstr4,1,1);
+                end
+               else
+                begin
+                 c_string_delete_item(tempcstr4,tempcstr4.count,1);
+                end;
+               tempstr2:=c_string_to_string(tempcstr4);
+               ctype:=c_type_to_pas_type(tempstr2);
+               tempstr3:=ctype.ctype; r:=1;
+               while(r<=ctype.clayer)do
+                begin
+                 New(typestate);
+                 typestate^.newname:='P'+tempstr3;
+                 typestate^.oldname:=
+                 c_string_generate_from_string('^'+tempstr3,true);
+                 tempstr3:='P'+tempstr3;
+                 inc(r);
+                end;
+               if(a>opestate^.genericcount) then
+                begin
+                 inc(opestate^.genericcount);
+                 SetLength(opestate^.generictype,a);
+                 opestate^.generictype[a-1]:=tempstr3;
+                end
+               else
+                begin
+                 opestate^.generictype[a-1]:=tempstr3;
+                end;
+              end;
+             inc(n);
+            end;
+           c_string_delete_item(tempcstr3,m,l-m+1); continue;
+          end
+         else if(tempcstr3.item[m-1]='static') then
           begin
            c_string_delete_item(tempcstr3,m,1); continue;
           end
@@ -11304,6 +12824,8 @@ begin
          tempstr5:='P'+tempstr5;
          inc(r);
         end;
+       opestate^.resulttype:=tempstr5;
+       writeln(opestate^.genericcount);
        if(opestate^.signname<>'') then
        pas_tree_add_item(res,pas_node_operator,opestate,false)
        else
@@ -11317,12 +12839,141 @@ begin
        classfuncstate^.isasm:=false; classfuncstate^.ext:=true; classfuncstate^.resulttype:='';
        classfuncstate^.funcname:=''; classfuncstate^.paramcount:=0;
        classfuncstate^.isvirtual:=false; classfuncstate^.isoverride:=false;
+       classfuncstate^.isgeneric:=false; classfuncstate^.genericcount:=0;
        paramindex:=0;
        tempcstr3:=tempcstr2;
        m:=1;
        while(m<=tempcstr3.Count)do
         begin
-         if(tempcstr3.item[m-1]='static') then
+         if(tempcstr3.item[m-1]='template') then
+          begin
+           classfuncstate^.isgeneric:=true;
+           n:=m+2; l:=m+2; layer:=0;
+           while(n<=tempcstr3.count)do
+            begin
+             if(tempcstr3.item[n-1]='<') then inc(layer);
+             if(tempcstr3.item[n-1]='>') then dec(layer);
+             if((layer=1) and (tempcstr3.item[n-1]=','))
+             or((layer=0) and (tempcstr3.item[n-1]='>')) then
+              begin
+               tempcstr4:=c_string_copy_item(tempcstr3,l,n-l);
+               r:=1; l:=n+1;
+               while(r<=tempcstr4.count)do
+                begin
+                 if(tempcstr4.item[r-1]='const') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='register') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='static') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='constexpr') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end;
+                 inc(r);
+                end;
+               if(tempcstr4.item[0]='typename') then
+                begin
+                 c_string_delete_item(tempcstr4,1,1);
+                end
+               else
+                begin
+                 c_string_delete_item(tempcstr4,tempcstr4.count,1);
+                end;
+               tempstr2:=c_string_to_string(tempcstr4);
+               ctype:=c_type_to_pas_type(tempstr2);
+               tempstr3:=ctype.ctype; r:=1;
+               while(r<=ctype.clayer)do
+                begin
+                 New(typestate);
+                 typestate^.newname:='P'+tempstr3;
+                 typestate^.oldname:=
+                 c_string_generate_from_string('^'+tempstr3,true);
+                 tempstr3:='P'+tempstr3;
+                 inc(r);
+                end;
+               inc(classfuncstate^.genericcount);
+               SetLength(classfuncstate^.generictype,classfuncstate^.genericcount);
+               classfuncstate^.generictype[classfuncstate^.genericcount-1]:=tempstr3;
+              end;
+             inc(n);
+            end;
+           c_string_delete_item(tempcstr3,m,l-m+1); continue;
+          end
+         else if(tempcstr3.item[m-1]='<') then
+          begin
+           n:=m+1; l:=m+1; layer:=0; a:=0;
+           while(n<=tempcstr3.count)do
+            begin
+             if(tempcstr3.item[n-1]='<') then inc(layer);
+             if(tempcstr3.item[n-1]='>') then dec(layer);
+             if((layer=1) and (tempcstr3.item[n-1]=','))
+             or((layer=0) and (tempcstr3.item[n-1]='>')) then
+              begin
+               tempcstr4:=c_string_copy_item(tempcstr3,l,n-l);
+               r:=1; l:=n+1; inc(a);
+               while(r<=tempcstr4.count)do
+                begin
+                 if(tempcstr4.item[r-1]='const') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='register') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='static') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='constexpr') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end;
+                 inc(r);
+                end;
+               if(tempcstr4.item[0]='typename') then
+                begin
+                 c_string_delete_item(tempcstr4,1,1);
+                end
+               else
+                begin
+                 c_string_delete_item(tempcstr4,tempcstr4.count,1);
+                end;
+               tempstr2:=c_string_to_string(tempcstr4);
+               ctype:=c_type_to_pas_type(tempstr2);
+               tempstr3:=ctype.ctype; r:=1;
+               while(r<=ctype.clayer)do
+                begin
+                 New(typestate);
+                 typestate^.newname:='P'+tempstr3;
+                 typestate^.oldname:=
+                 c_string_generate_from_string('^'+tempstr3,true);
+                 tempstr3:='P'+tempstr3;
+                 inc(r);
+                end;
+               if(a>classfuncstate^.genericcount) then
+                begin
+                 inc(classfuncstate^.genericcount);
+                 SetLength(classfuncstate^.generictype,a);
+                 classfuncstate^.generictype[a-1]:=tempstr3;
+                end
+               else
+                begin
+                 classfuncstate^.generictype[a-1]:=tempstr3;
+                end;
+              end;
+             inc(n);
+            end;
+           c_string_delete_item(tempcstr3,m,l-m+1); continue;
+          end
+         else if(tempcstr3.item[m-1]='static') then
           begin
            c_string_delete_item(tempcstr3,m,1); continue;
           end
@@ -11534,13 +13185,142 @@ begin
        New(funcstate);
        funcstate^.abi:=''; funcstate^.align:=''; funcstate^.conv:='cdecl'; funcstate^.funcinline:=false;
        funcstate^.isasm:=false; funcstate^.ext:=true; funcstate^.resulttype:='';
-       funcstate^.funcname:=''; funcstate^.paramcount:=0;
+       funcstate^.funcname:=''; funcstate^.paramcount:=0; funcstate^.islambda:=false;
+       funcstate^.isgeneric:=false; funcstate^.genericcount:=0;
        paramindex:=0;
        tempcstr3:=tempcstr2;
        m:=1;
        while(m<=tempcstr3.Count)do
         begin
-         if(tempcstr3.item[m-1]='static') then
+         if(tempcstr3.item[m-1]='template') then
+          begin
+           funcstate^.isgeneric:=true;
+           n:=m+2; l:=m+2; layer:=0;
+           while(n<=tempcstr3.count)do
+            begin
+             if(tempcstr3.item[n-1]='<') then inc(layer);
+             if(tempcstr3.item[n-1]='>') then dec(layer);
+             if((layer=1) and (tempcstr3.item[n-1]=','))
+             or((layer=0) and (tempcstr3.item[n-1]='>')) then
+              begin
+               tempcstr4:=c_string_copy_item(tempcstr3,l,n-l);
+               r:=1; l:=n+1;
+               while(r<=tempcstr4.count)do
+                begin
+                 if(tempcstr4.item[r-1]='const') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='register') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='static') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='constexpr') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end;
+                 inc(r);
+                end;
+               if(tempcstr4.item[0]='typename') then
+                begin
+                 c_string_delete_item(tempcstr4,1,1);
+                end
+               else
+                begin
+                 c_string_delete_item(tempcstr4,tempcstr4.count,1);
+                end;
+               tempstr2:=c_string_to_string(tempcstr4);
+               ctype:=c_type_to_pas_type(tempstr2);
+               tempstr3:=ctype.ctype; r:=1;
+               while(r<=ctype.clayer)do
+                begin
+                 New(typestate);
+                 typestate^.newname:='P'+tempstr3;
+                 typestate^.oldname:=
+                 c_string_generate_from_string('^'+tempstr3,true);
+                 tempstr3:='P'+tempstr3;
+                 inc(r);
+                end;
+               inc(funcstate^.genericcount);
+               SetLength(funcstate^.generictype,funcstate^.genericcount);
+               funcstate^.generictype[funcstate^.genericcount-1]:=tempstr3;
+              end;
+             inc(n);
+            end;
+           c_string_delete_item(tempcstr3,m,l-m+1); continue;
+          end
+         else if(tempcstr3.item[m-1]='<') then
+          begin
+           n:=m+1; l:=m+1; layer:=0; a:=0;
+           while(n<=tempcstr3.count)do
+            begin
+             if(tempcstr3.item[n-1]='<') then inc(layer);
+             if(tempcstr3.item[n-1]='>') then dec(layer);
+             if((layer=1) and (tempcstr3.item[n-1]=','))
+             or((layer=0) and (tempcstr3.item[n-1]='>')) then
+              begin
+               tempcstr4:=c_string_copy_item(tempcstr3,l,n-l);
+               r:=1; l:=n+1; inc(a);
+               while(r<=tempcstr4.count)do
+                begin
+                 if(tempcstr4.item[r-1]='const') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='register') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='static') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end
+                 else if(tempcstr4.item[r-1]='constexpr') then
+                  begin
+                   c_string_delete_item(tempcstr4,r,1); continue;
+                  end;
+                 inc(r);
+                end;
+               if(tempcstr4.item[0]='typename') then
+                begin
+                 c_string_delete_item(tempcstr4,1,1);
+                end
+               else
+                begin
+                 c_string_delete_item(tempcstr4,tempcstr4.count,1);
+                end;
+               tempstr2:=c_string_to_string(tempcstr4);
+               ctype:=c_type_to_pas_type(tempstr2);
+               tempstr3:=ctype.ctype; r:=1;
+               while(r<=ctype.clayer)do
+                begin
+                 New(typestate);
+                 typestate^.newname:='P'+tempstr3;
+                 typestate^.oldname:=
+                 c_string_generate_from_string('^'+tempstr3,true);
+                 tempstr3:='P'+tempstr3;
+                 inc(r);
+                end;
+               if(a>funcstate^.genericcount) then
+                begin
+                 inc(funcstate^.genericcount);
+                 SetLength(funcstate^.generictype,a);
+                 funcstate^.generictype[a-1]:=tempstr3;
+                end
+               else
+                begin
+                 funcstate^.generictype[a-1]:=tempstr3;
+                end;
+              end;
+             inc(n);
+            end;
+           c_string_delete_item(tempcstr3,m,l-m+1); continue;
+          end
+         else if(tempcstr3.item[m-1]='static') then
           begin
            c_string_delete_item(tempcstr3,m,1); continue;
           end
@@ -11815,6 +13595,7 @@ begin
   begin
    paramindex:=0;
    New(funcstate);
+   funcstate^.islambda:=false;
    funcstate^.funcname:=Pc_function(orgtree^.content)^.funcname;
    if(Pc_function(orgtree^.content)^.funcabi='ms_abi') then
    funcstate^.abi:='ms_abi_default'
@@ -11829,6 +13610,37 @@ begin
    funcstate^.funcalias:=Pc_function(orgtree^.content)^.funcalias;
    funcstate^.funcname:=Pc_function(orgtree^.content)^.funcname;
    funcstate^.isasm:=Pc_function(orgtree^.content)^.isasm;
+   funcstate^.genericcount:=0;
+   i:=1;
+   funcstate^.isgeneric:=Pc_function(orgtree^.content)^.generichave;
+   if(funcstate^.isgeneric=false) then goto l3;
+   len1:=Pc_function(orgtree^.content)^.genericcount;
+   len2:=Pc_function(orgtree^.content)^.genericspeccount;
+   len3:=Max(len1,len2);
+   while(i<=len3) do
+    begin
+     if(i>len1) then tempcstr.count:=0
+     else tempcstr:=Pc_function(orgtree^.content)^.genericitem[i-1];
+     if(i>len2) then tempcstr2.count:=0
+     else tempcstr2:=Pc_function(orgtree^.content)^.genericspec[i-1];
+     if(tempcstr2.count>0) then tempstr:=c_string_to_string(tempcstr2,false)
+     else tempstr:=c_string_to_string(tempcstr,false);
+     ctype:=c_type_to_pas_type(tempstr);
+     tempstr2:=ctype.ctype; j:=1;
+     while(j<=ctype.clayer)do
+      begin
+       New(typestate);
+       typestate^.newname:='P'+tempstr2;
+       typestate^.oldname:=c_string_generate_from_string('^'+tempstr2,true);
+       pas_tree_add_item(res,pas_node_type,typestate,false);
+       inc(j);
+      end;
+     inc(funcstate^.genericcount);
+     SetLength(funcstate^.generictype,funcstate^.genericcount);
+     funcstate^.generictype[funcstate^.genericcount-1]:=tempstr2;
+     inc(i);
+    end;
+   l3:
    ctype:=c_type_to_pas_type(Pc_function(orgtree^.content)^.resulttype);
    tempstr:=ctype.ctype; i:=1;
    while(i<=ctype.clayer)do
@@ -11899,8 +13711,8 @@ begin
    classfuncstate^.funcalias:=Pc_class_function(orgtree^.content)^.funcalias;
    classfuncstate^.align:=convert_c_number_to_pas_number(Pc_class_function(orgtree^.content)^.funcalign);
    classfuncstate^.conv:=Pc_class_function(orgtree^.content)^.funcconv;
-   if(res^.parent<>nil) and (res^.parent^.treetype=c_node_class) then
-   classfuncstate^.hostname:=Pc_class(res^.parent^.content)^.classname
+   if(ctree^.treetype=c_node_class) then
+   classfuncstate^.hostname:=Pc_class(ctree^.content)^.classname
    else
    classfuncstate^.hostname:=Pc_class_function(orgtree^.content)^.hostclassname;
    classfuncstate^.isabstract:=Pc_class_function(orgtree^.content)^.isabstract;
@@ -11910,6 +13722,37 @@ begin
    classfuncstate^.isdestructor:=Pc_class_function(orgtree^.content)^.isdestructor;
    classfuncstate^.isvirtual:=Pc_class_function(orgtree^.content)^.isvirtual;
    classfuncstate^.isasm:=Pc_class_function(orgtree^.content)^.isasm;
+   i:=1;
+   classfuncstate^.isgeneric:=Pc_class_function(orgtree^.content)^.generichave;
+   classfuncstate^.genericcount:=0;
+   if(classfuncstate^.isgeneric=false) then goto l4;
+   len1:=Pc_class_function(orgtree^.content)^.genericcount;
+   len2:=Pc_class_function(orgtree^.content)^.genericspeccount;
+   len3:=Max(len1,len2);
+   while(i<=len3) do
+    begin
+     if(i>len1) then tempcstr.count:=0
+     else tempcstr:=Pc_class_function(orgtree^.content)^.genericitem[i-1];
+     if(i>len2) then tempcstr2.count:=0
+     else tempcstr2:=Pc_class_function(orgtree^.content)^.genericspec[i-1];
+     if(tempcstr2.count>0) then tempstr:=c_string_to_string(tempcstr2,false)
+     else tempstr:=c_string_to_string(tempcstr,false);
+     ctype:=c_type_to_pas_type(tempstr);
+     tempstr2:=ctype.ctype; j:=1;
+     while(j<=ctype.clayer)do
+      begin
+       New(typestate);
+       typestate^.newname:='P'+tempstr2;
+       typestate^.oldname:=c_string_generate_from_string('^'+tempstr2,true);
+       pas_tree_add_item(res,pas_node_type,typestate,false);
+       inc(j);
+      end;
+     inc(classfuncstate^.genericcount);
+     SetLength(classfuncstate^.generictype,classfuncstate^.genericcount);
+     classfuncstate^.generictype[classfuncstate^.genericcount-1]:=tempstr2;
+     inc(i);
+    end;
+   l4:
    ctype:=c_type_to_pas_type(Pc_class_function(orgtree^.content)^.resulttype);
    tempstr:=ctype.ctype; i:=1;
    while(i<=ctype.clayer)do
@@ -11972,6 +13815,23 @@ begin
     begin
      if(ctree^.treetype=c_node_class) then
      pas_tree_add_item(res,pas_node_class_function,classfuncstate,false);
+    end;
+   if(Pc_class_function(orgtree^.content)^.funchaveinit=true) then
+    begin
+     temppas:=convert_c_init_to_pas_expression(Pc_class_function(orgtree^.content)^.funcinit,res);
+     tempres:=res^.child+res^.count-1;
+     for i:=1 to temppas.formercount do
+      begin
+       New(expstate);
+       expstate^.content:=temppas.formerexp[i-1];
+       pas_tree_add_item(tempres,pas_node_expression,expstate,false);
+      end;
+     New(expstate);
+     expstate^.content:=temppas.exp;
+     pas_tree_add_item(tempres,pas_node_expression,expstate,false);
+    end;
+   if(orgtree^.count>0) then
+    begin
      convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
     end;
   end
@@ -12026,6 +13886,37 @@ begin
    opestate^.signname:='';
    if(opestate^.signname<>'') then
     begin
+     opestate^.isgeneric:=Pc_operator(orgtree^.content)^.generichave;
+     opestate^.genericcount:=0;
+     if(opestate^.isgeneric=false) then goto l5;
+     len1:=Pc_operator(orgtree^.content)^.genericcount;
+     len2:=Pc_operator(orgtree^.content)^.genericspeccount;
+     writeln(len1,' ',len2);
+     len3:=Max(len1,len2);
+     while(i<=len3) do
+      begin
+       if(i>len1) then tempcstr.count:=0
+       else tempcstr:=Pc_operator(orgtree^.content)^.genericitem[i-1];
+       if(i>len2) then tempcstr2.count:=0
+       else tempcstr2:=Pc_operator(orgtree^.content)^.genericspec[i-1];
+       if(tempcstr2.count>0) then tempstr:=c_string_to_string(tempcstr2,false)
+       else tempstr:=c_string_to_string(tempcstr,false);
+       ctype:=c_type_to_pas_type(tempstr);
+       tempstr2:=ctype.ctype; j:=1;
+       while(j<=ctype.clayer)do
+        begin
+         New(typestate);
+         typestate^.newname:='P'+tempstr2;
+         typestate^.oldname:=c_string_generate_from_string('^'+tempstr2,true);
+         pas_tree_add_item(res,pas_node_type,typestate,false);
+         inc(j);
+        end;
+       inc(opestate^.genericcount);
+       SetLength(opestate^.generictype,opestate^.genericcount);
+       opestate^.generictype[opestate^.genericcount-1]:=tempstr2;
+       inc(i);
+      end;
+     l5:
      ctype:=c_type_to_pas_type(Pc_operator(orgtree^.content)^.operestype);
      tempstr:=ctype.ctype; i:=1;
      while(i<=ctype.clayer)do
@@ -12083,7 +13974,11 @@ begin
       end;
      opestate^.resultname:='res';
      pas_tree_add_item(res,pas_node_operator,opestate,false);
-     if(orgtree^.count>0) then convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
+     if(orgtree^.count>0) then
+      begin
+       pas_tree_add_item(res,pas_node_operator,opestate,false);
+       convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
+      end;
     end
    else Dispose(opestate);
   end
@@ -12110,7 +14005,7 @@ begin
   end
  else if(orgtree^.treetype=c_node_if_statement) then
   begin
-   temppas:=convert_c_expression_to_pas_expression(Pc_if_statement(orgtree^.content)^.condition);
+   temppas:=convert_c_expression_to_pas_expression(Pc_if_statement(orgtree^.content)^.condition,res);
    i:=1;
    while(i<=temppas.temptypecount) do
     begin
@@ -12175,7 +14070,7 @@ begin
      expstate^.content:=temppas.exp;
      pas_tree_add_item(res,pas_node_expression,expstate,false);
      temppas:=convert_c_expression_to_pas_expression(
-     Pc_loop_statement(orgtree^.content)^.condition);
+     Pc_loop_statement(orgtree^.content)^.condition,res);
      New(loopstate);
      loopstate^.condition:=temppas.exp;
      c_string_delete_unnecessary_bracket(loopstate^.condition);
@@ -12207,7 +14102,7 @@ begin
        inc(i);
       end;
      temppas:=convert_c_expression_to_pas_expression(
-     Pc_loop_statement(orgtree^.content)^.step);
+     Pc_loop_statement(orgtree^.content)^.step,res);
      tempres:=res^.child+res^.count-1; i:=1;
      while(i<=temppas.temptypecount) do
       begin
@@ -12236,7 +14131,7 @@ begin
    else
     begin
      temppas:=convert_c_expression_to_pas_expression(
-     Pc_loop_statement(orgtree^.content)^.condition);
+     Pc_loop_statement(orgtree^.content)^.condition,res);
      i:=1;
      while(i<=temppas.temptypecount) do
       begin
@@ -12294,12 +14189,13 @@ begin
    New(classstate);
    classstate^.classname:=Pc_namespace(orgtree^.content)^.spacename;
    classstate^.inheritcount:=0;
+   classstate^.isgeneric:=false;
    pas_tree_add_item(res,pas_node_class,classstate,false);
    convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
   end
  else if(orgtree^.treetype=c_node_return) then
   begin
-   temppas:=convert_c_expression_to_pas_expression(Pc_return(orgtree^.content)^.retvalue);
+   temppas:=convert_c_expression_to_pas_expression(Pc_return(orgtree^.content)^.retvalue,res);
    i:=1;
    while(i<=temppas.temptypecount) do
     begin
@@ -12359,18 +14255,6 @@ begin
      pas_tree_add_item(res,pas_node_return,retstate,false);
     end;
   end
- else if(orgtree^.treetype=c_node_template) then
-  begin
-   i:=1; len:=Pc_template(orgtree^.content)^.tlcount;
-   while(i<=len) do
-    begin
-     New(typestate);
-     typestate^.newname:=Pc_template(orgtree^.content)^.tlcontent[i-1].item[0];
-     typestate^.oldname:=c_string_generate_from_string(
-     Pc_template(orgtree^.content)^.tlcontent[i-1].item[1]);
-     pas_tree_add_item(res,pas_node_type,typestate,false);
-    end;
-  end
  else if(orgtree^.treetype=c_node_struct) then
   begin
    New(recstate);
@@ -12387,6 +14271,37 @@ begin
    else if(Pc_struct(orgtree^.content)^.pack=0) then recstate^.recordtype:=0;
    if(Pc_struct(orgtree^.content)^.structtype) then recstate^.recordunion:=true
    else recstate^.recordunion:=false;
+   recstate^.isgeneric:=Pc_struct(orgtree^.content)^.generichave;
+   i:=1;
+   if(Pc_struct(orgtree^.content)^.generichave=true) then
+    begin
+     len1:=Pc_struct(orgtree^.content)^.genericcount;
+     len2:=Pc_struct(orgtree^.content)^.genericspeccount;
+     len3:=Max(len1,len2);
+     while(i<=len3) do
+      begin
+       if(i>len1) then tempcstr.count:=0
+       else tempcstr:=Pc_struct(orgtree^.content)^.genericitem[i-1];
+       if(i>len2) then tempcstr2.count:=0
+       else tempcstr2:=Pc_struct(orgtree^.content)^.genericspec[i-1];
+       if(tempcstr2.count>0) then tempstr:=c_string_to_string(tempcstr2,false)
+       else tempstr:=c_string_to_string(tempcstr,false);
+       ctype:=c_type_to_pas_type(tempstr);
+       tempstr2:=ctype.ctype; j:=1;
+       while(j<=ctype.clayer)do
+        begin
+         New(typestate);
+         typestate^.newname:='P'+tempstr2;
+         typestate^.oldname:=c_string_generate_from_string('^'+tempstr2,true);
+         pas_tree_add_item(res,pas_node_type,typestate,false);
+         inc(j);
+        end;
+       inc(recstate^.genericcount);
+       SetLength(recstate^.generictype,recstate^.genericcount);
+       recstate^.generictype[recstate^.genericcount-1]:=tempstr2;
+       inc(i);
+      end;
+    end;
    i:=1; len:=orgtree^.Count;
    while(i<=len)do
     begin
@@ -13017,6 +14932,364 @@ begin
      if(Pc_define(orgtree^.content)^.defstate=true) then defstate^.deftype:=1 else defstate^.deftype:=0;
      pas_tree_add_item(res,pas_node_define,defstate,false);
     end;
+  end
+ else if(orgtree^.treetype=c_node_lambda_expression) then
+  begin
+   New(funcstate);
+   funcstate^.funcname:=Pc_lambda_expression(orgtree^.content)^.funcname;
+   funcstate^.paramcount:=0;
+   funcstate^.islambda:=true;
+   funcstate^.isgeneric:=false;
+   funcstate^.genericcount:=0;
+   funcstate^.abi:='';
+   funcstate^.align:='';
+   funcstate^.conv:='';
+   funcstate^.funcalias:='';
+   funcstate^.funcinline:=false;
+   funcstate^.ext:=false;
+   funcstate^.isasm:=false;
+   funcstate^.isgeneric:=false;
+   i:=1; len:=Pc_lambda_expression(orgtree^.content)^.parametercount;
+   for i:=1 to len do
+    begin
+     inc(funcstate^.paramcount);
+     SetLength(funcstate^.param,funcstate^.paramcount);
+     tempcstr:=Pc_lambda_expression(orgtree^.content)^.parameteritem[i-1];
+     if(c_string_check_function_pointer(tempcstr)) then
+     temppas:=convert_c_func_pointer_to_pas_func_pointer(tempcstr)
+     else temppas:=convert_c_param_to_pas_param(tempcstr);
+     for j:=1 to temppas.temptypecount do
+      begin
+       New(typestate);
+       typestate^:=temppas.temptype[j-1];
+       pas_tree_add_item(res,pas_node_type,typestate,false);
+      end;
+     funcstate^.param[i-1]:=temppas.exp;
+    end;
+   funcstate^.paramcaptureindex:=funcstate^.paramcount;
+   i:=1; len:=Pc_lambda_expression(orgtree^.content)^.capturecount;
+   funcstate^.resulttype:='';
+   ctype:=c_type_to_pas_type(Pc_lambda_expression(orgtree^.content)^.rettype);
+   i:=1; tempstr:=ctype.ctype;
+   while(i<=ctype.clayer)do
+    begin
+     New(typestate);
+     typestate^.newname:='P'+tempstr;
+     typestate^.oldname:=c_string_generate_from_string('^'+tempstr,true);
+     tempstr:='P'+tempstr;
+     inc(i);
+    end;
+   i:=1; len:=Pc_lambda_expression(orgtree^.content)^.capturecount;
+   temppas.formercount:=0; strlist.count:=0;
+   while(i<=len)do
+    begin
+     tempcstr:=Pc_lambda_expression(orgtree^.content)^.captureitem[i-1];
+     j:=1;
+     while(j<=tempcstr.count)do
+      begin
+       if(tempcstr.item[j-1]='mutable') or (tempcstr.item[j-1]='MUTABLE') then
+        begin
+         c_string_delete_item(tempcstr,j,1); continue;
+        end
+       else if(tempcstr.item[j-1]='const') or (tempcstr.item[j-1]='CONST') then
+        begin
+         c_string_delete_item(tempcstr,j,1); continue;
+        end
+       else if(tempcstr.item[j-1]='register') or (tempcstr.item[j-1]='REGISTER') then
+        begin
+         c_string_delete_item(tempcstr,j,1); continue;
+        end
+       else if(tempcstr.item[j-1]='static') or (tempcstr.item[j-1]='STATIC') then
+        begin
+         c_string_delete_item(tempcstr,j,1); continue;
+        end
+       else if(tempcstr.item[j-1]='constexpr') or (tempcstr.item[j-1]='CONSTEXPR') then
+        begin
+         c_string_delete_item(tempcstr,j,1); continue;
+        end;
+       inc(j);
+      end;
+     inc(i);
+     if(tempcstr.count=1) and (tempcstr.item[0]='=') then
+      begin
+       bool1:=true; continue;
+      end
+     else if(tempcstr.count=1) and (tempcstr.item[0]='&') then
+      begin
+       bool2:=true; continue;
+      end
+     else if(tempcstr.count>1) and (tempcstr.item[0]='=') then
+      begin
+       c_string_delete_item(tempcstr,1,1);
+       j:=res^.count;
+       while(j>0)do
+        begin
+         tempres:=res^.child+res^.count-1;
+         if(tempres^.treetype=pas_node_variable) and
+         (Ppas_variable(tempres^.content)^.varname=tempcstr.item[0]) then
+          begin
+           k:=Ppas_variable(tempres^.content)^.vararrayc;
+           m:=1; tempstr:='';
+           while(m<=k)do
+            begin
+             if(m=1) then tempstr:='array[';
+             tempstr:=tempstr+c_string_to_string(Ppas_variable(tempres^.content)^.vararrayd[m-1]);
+             if(m<k) then tempstr:=tempstr+',' else tempstr:=tempstr+'] of ';
+             inc(m);
+            end;
+           if(k>0) then
+            begin
+             New(typestate);
+             typestate^.newname:='arr'+IntToStr(newarrayindex);
+             inc(newarrayindex);
+             typestate^.oldname:=
+             c_string_generate_from_string(tempstr+Ppas_variable(tempres^.content)^.vartype,true);
+            end
+           else
+            begin
+             tempcstr2:=c_string_generate_from_string(':'+Ppas_variable(tempres^.content)^.vartype,true);
+             c_string_insert_item(tempcstr.item[0],tempcstr2,1);
+             inc(funcstate^.paramcount);
+             SetLength(funcstate^.param,funcstate^.paramcount);
+             funcstate^.param[funcstate^.paramcount-1]:=tempcstr2;
+            end;
+          end;
+         dec(j);
+        end;
+      end
+     else if(tempcstr.count>1) and (tempcstr.item[0]='&') then
+      begin
+       c_string_delete_item(tempcstr,1,1);
+       j:=res^.count;
+       while(j>0)do
+        begin
+         tempres:=res^.child+res^.count-1;
+         if(tempres^.treetype=pas_node_variable) and
+         (Ppas_variable(tempres^.content)^.varname=tempcstr.item[0]) then
+          begin
+           k:=Ppas_variable(tempres^.content)^.vararrayc;
+           m:=1; tempstr:='';
+           while(m<=k)do
+            begin
+             if(m=1) then tempstr:='array[';
+             tempstr:=tempstr+c_string_to_string(Ppas_variable(tempres^.content)^.vararrayd[m-1]);
+             if(m<k) then tempstr:=tempstr+',' else tempstr:=tempstr+'] of ';
+             inc(m);
+            end;
+           if(k>0) then
+            begin
+             New(typestate);
+             typestate^.newname:='arr'+IntToStr(newarrayindex);
+             inc(newarrayindex);
+             typestate^.oldname:=
+             c_string_generate_from_string(tempstr+Ppas_variable(tempres^.content)^.vartype,true);
+            end
+           else
+            begin
+             tempcstr2:=c_string_generate_from_string(':'+Ppas_variable(tempres^.content)^.vartype,true);
+             c_string_insert_item(tempcstr.item[0],tempcstr2,1);
+             c_string_insert_item('var',tempcstr2,1);
+             inc(funcstate^.paramcount);
+             SetLength(funcstate^.param,funcstate^.paramcount);
+             funcstate^.param[funcstate^.paramcount-1]:=tempcstr2;
+            end;
+          end;
+         dec(j);
+        end;
+      end
+     else
+      begin
+       k:=2;
+       while(k<=tempcstr.count) do
+        begin
+         if(tempcstr.item[k-1]='=') then break;
+         inc(k);
+        end;
+       if(k>=tempcstr.count) then
+        begin
+         while(j>0)do
+          begin
+           tempres:=res^.child+res^.count-1;
+           if(tempres^.treetype=pas_node_variable) and
+           (Ppas_variable(tempres^.content)^.varname=tempcstr.item[0]) then
+            begin
+             k:=Ppas_variable(tempres^.content)^.vararrayc;
+             m:=1; tempstr:='';
+             while(m<=k)do
+              begin
+               if(m=1) then tempstr:='array[';
+               tempstr:=tempstr+c_string_to_string(Ppas_variable(tempres^.content)^.vararrayd[m-1]);
+               if(m<k) then tempstr:=tempstr+',' else tempstr:=tempstr+'] of ';
+               inc(m);
+              end;
+             if(k>0) then
+              begin
+               New(typestate);
+               typestate^.newname:='arr'+IntToStr(newarrayindex);
+               inc(newarrayindex);
+               typestate^.oldname:=
+               c_string_generate_from_string(tempstr+Ppas_variable(tempres^.content)^.vartype,true);
+              end
+             else
+              begin
+               tempcstr2:=c_string_generate_from_string(':'+Ppas_variable(tempres^.content)^.vartype,true);
+               c_string_insert_item(tempcstr.item[0],tempcstr2,1);
+               inc(funcstate^.paramcount);
+               SetLength(funcstate^.param,funcstate^.paramcount);
+               funcstate^.param[funcstate^.paramcount-1]:=tempcstr2;
+              end;
+            end;
+           dec(j);
+          end;
+        end
+       else
+        begin
+         k:=c_string_divide_type_and_name(tempcstr);
+         if(k>0)then
+          begin
+           tempstr:=c_string_to_string(c_string_copy_item(tempcstr,1,k-1));
+           ctype:=c_type_to_pas_type(tempstr);
+           tempstr2:=ctype.ctype;
+           for j:=1 to ctype.clayer do
+            begin
+             New(typestate);
+             typestate^.newname:='P'+tempstr2;
+             typestate^.oldname:=
+             c_string_generate_from_string('^'+tempstr2,true);
+             tempstr2:='P'+tempstr2;
+             pas_tree_add_item(res,pas_node_type,typestate,false);
+            end;
+           c_string_delete_item(tempcstr,1,k-2);
+          end;
+         inc(temppas.formercount);
+         SetLength(temppas.formerexp,temppas.formercount);
+         temppas.formerexp[temppas.formercount-1]:=
+         convert_c_expression_to_pas_expression(tempcstr,res).exp;
+        end;
+      end;
+     inc(strlist.count);
+     SetLength(strlist.item,strlist.count);
+     strlist.item[strlist.count-1]:=tempcstr;
+    end;
+   funcstate^.resulttype:=tempstr;
+   if(bool1=true) then
+    begin
+     j:=res^.count;
+     while(j>0)do
+      begin
+       tempres:=res^.child+res^.count-1;
+       if(tempres^.treetype=pas_node_variable) then
+        begin
+         k:=funcstate^.paramcount;
+         while(k>0)do
+          begin
+           if(funcstate^.param[k-1].item[0]='var') then
+            begin
+             if(funcstate^.param[k-1].item[1]=Ppas_variable(tempres^.content)^.varname) then break;
+            end
+           else
+            begin
+             if(funcstate^.param[k-1].item[0]=Ppas_variable(tempres^.content)^.varname) then break;
+            end;
+           dec(k);
+          end;
+         if(k>0) then
+          begin
+           dec(j); continue;
+          end;
+         k:=Ppas_variable(tempres^.content)^.vararrayc;
+         m:=1; tempstr:='';
+         while(m<=k)do
+          begin
+           if(m=1) then tempstr:='array[';
+           tempstr:=tempstr+c_string_to_string(Ppas_variable(tempres^.content)^.vararrayd[m-1]);
+           if(m<k) then tempstr:=tempstr+',' else tempstr:=tempstr+'] of ';
+           inc(m);
+          end;
+         if(k>0) then
+          begin
+           New(typestate);
+           typestate^.newname:='arr'+IntToStr(newarrayindex);
+           inc(newarrayindex);
+           typestate^.oldname:=
+           c_string_generate_from_string(tempstr+Ppas_variable(tempres^.content)^.vartype,true);
+          end
+         else
+          begin
+           tempcstr2:=c_string_generate_from_string(':'+Ppas_variable(tempres^.content)^.vartype,true);
+           c_string_insert_item(tempcstr.item[0],tempcstr2,1);
+           c_string_insert_item('var',tempcstr2,1);
+           inc(funcstate^.paramcount);
+           SetLength(funcstate^.param,funcstate^.paramcount);
+           funcstate^.param[funcstate^.paramcount-1]:=tempcstr2;
+          end;
+        end;
+       dec(j);
+      end;
+    end;
+   if(bool2=true) then
+    begin
+     j:=res^.count;
+     while(j>0)do
+      begin
+       tempres:=res^.child+res^.count-1;
+       if(tempres^.treetype=pas_node_variable) then
+        begin
+         k:=funcstate^.paramcount;
+         while(k>0)do
+          begin
+           if(funcstate^.param[k-1].item[0]='var') then
+            begin
+             if(funcstate^.param[k-1].item[1]=Ppas_variable(tempres^.content)^.varname) then break;
+            end
+           else
+            begin
+             if(funcstate^.param[k-1].item[0]=Ppas_variable(tempres^.content)^.varname) then break;
+            end;
+           dec(k);
+          end;
+         if(k>0) then
+          begin
+           dec(j); continue;
+          end;
+         k:=Ppas_variable(tempres^.content)^.vararrayc;
+         m:=1; tempstr:='';
+         while(m<=k)do
+          begin
+           if(m=1) then tempstr:='array[';
+           tempstr:=tempstr+c_string_to_string(Ppas_variable(tempres^.content)^.vararrayd[m-1]);
+           if(m<k) then tempstr:=tempstr+',' else tempstr:=tempstr+'] of ';
+           inc(m);
+          end;
+         if(k>0) then
+          begin
+           New(typestate);
+           typestate^.newname:='arr'+IntToStr(newarrayindex);
+           inc(newarrayindex);
+           typestate^.oldname:=
+           c_string_generate_from_string(tempstr+Ppas_variable(tempres^.content)^.vartype,true);
+          end
+         else
+          begin
+           tempcstr2:=c_string_generate_from_string(':'+Ppas_variable(tempres^.content)^.vartype,true);
+           c_string_insert_item(tempcstr.item[0],tempcstr2,1);
+           inc(funcstate^.paramcount);
+           SetLength(funcstate^.param,funcstate^.paramcount);
+           funcstate^.param[funcstate^.paramcount-1]:=tempcstr2;
+          end;
+        end;
+       dec(j);
+      end;
+    end;
+   pas_tree_add_item(res,pas_node_function,funcstate,false);
+   tempres:=res^.child+res^.count-1;
+   for i:=1 to temppas.formercount do
+    begin
+     New(expstate);
+     expstate^.content:=temppas.formerexp[i-1];
+     pas_tree_add_item(tempres,pas_node_expression,expstate,false);
+    end;
+   if(orgtree^.count>0) then convert_c_tree_to_pas_tree(orgtree,res^.child+res^.count-1);
   end;
  l2:
  if(ii<ctree^.count)then
@@ -13195,10 +15468,22 @@ begin
    New(Ppas_class(desttree^.content));
    Ppas_class(desttree^.content)^.classname:=Ppas_class(srctree^.content)^.classname;
    Ppas_class(desttree^.content)^.inheritcount:=Ppas_class(srctree^.content)^.inheritcount;
+   SetLength(Ppas_class(desttree^.content)^.inheritclass,Ppas_class(desttree^.content)^.inheritcount);
    for i:=1 to Ppas_class(srctree^.content)^.inheritcount do
     begin
      Ppas_class(desttree^.content)^.inheritclass[i-1]:=
      Ppas_class(srctree^.content)^.inheritclass[i-1];
+    end;
+   Ppas_class(desttree^.content)^.isgeneric:=Ppas_class(srctree^.content)^.isgeneric;
+   if(Ppas_class(desttree^.content)^.isgeneric=true) then
+    begin
+     SetLength(Ppas_class(desttree^.content)^.generictype,
+     Ppas_class(srctree^.content)^.genericcount);
+     for i:=1 to Ppas_class(srctree^.content)^.genericcount do
+      begin
+       Ppas_class(desttree^.content)^.generictype[i-1]:=
+       Ppas_class(srctree^.content)^.generictype[i-1];
+      end;
     end;
   end
  else if(srctree^.treetype=pas_node_class_function) then
@@ -13242,6 +15527,17 @@ begin
     begin
      Ppas_class_function(desttree^.content)^.param[i-1]:=
      Ppas_class_function(srctree^.content)^.param[i-1];
+    end;
+   Ppas_class_function(desttree^.content)^.isgeneric:=Ppas_class_function(srctree^.content)^.isgeneric;
+   if(Ppas_class_function(desttree^.content)^.isgeneric=true) then
+    begin
+     SetLength(Ppas_class_function(desttree^.content)^.generictype,
+     Ppas_class_function(srctree^.content)^.genericcount);
+     for i:=1 to Ppas_class_function(srctree^.content)^.genericcount do
+      begin
+       Ppas_class_function(desttree^.content)^.generictype[i-1]:=
+       Ppas_class_function(srctree^.content)^.generictype[i-1];
+      end;
     end;
   end
  else if(srctree^.treetype=pas_node_class_tag) then
@@ -13314,6 +15610,17 @@ begin
     begin
      Ppas_function(desttree^.content)^.param[i-1]:=Ppas_function(srctree^.content)^.param[i-1];
     end;
+   Ppas_function(desttree^.content)^.isgeneric:=Ppas_operator(srctree^.content)^.isgeneric;
+   if(Ppas_function(desttree^.content)^.isgeneric=true) then
+    begin
+     SetLength(Ppas_function(desttree^.content)^.generictype,
+     Ppas_function(srctree^.content)^.genericcount);
+     for i:=1 to Ppas_function(srctree^.content)^.genericcount do
+      begin
+       Ppas_function(desttree^.content)^.generictype[i-1]:=
+       Ppas_function(srctree^.content)^.generictype[i-1];
+      end;
+    end;
   end
  else if(srctree^.treetype=pas_node_goto_or_label) then
   begin
@@ -13379,6 +15686,17 @@ begin
     begin
      Ppas_operator(desttree^.content)^.param[i-1]:=Ppas_operator(srctree^.content)^.param[i-1];
     end;
+   Ppas_operator(desttree^.content)^.isgeneric:=Ppas_operator(srctree^.content)^.isgeneric;
+   if(Ppas_operator(desttree^.content)^.isgeneric=true) then
+    begin
+     SetLength(Ppas_operator(desttree^.content)^.generictype,
+     Ppas_operator(srctree^.content)^.genericcount);
+     for i:=1 to Ppas_operator(srctree^.content)^.genericcount do
+      begin
+       Ppas_operator(desttree^.content)^.generictype[i-1]:=
+       Ppas_operator(srctree^.content)^.generictype[i-1];
+      end;
+    end;
   end
  else if(srctree^.treetype=pas_node_record) then
   begin
@@ -13386,6 +15704,16 @@ begin
    Ppas_record(desttree^.content)^.recordname:=Ppas_record(srctree^.content)^.recordname;
    Ppas_record(desttree^.content)^.recordtype:=Ppas_record(srctree^.content)^.recordtype;
    Ppas_record(desttree^.content)^.recordunion:=Ppas_record(srctree^.content)^.recordunion;
+   Ppas_record(desttree^.content)^.isgeneric:=Ppas_record(srctree^.content)^.isgeneric;
+   if(Ppas_record(desttree^.content)^.isgeneric=true) then
+    begin
+     SetLength(Ppas_record(desttree^.content)^.generictype,Ppas_record(srctree^.content)^.genericcount);
+     for i:=1 to Ppas_record(srctree^.content)^.genericcount do
+      begin
+       Ppas_record(desttree^.content)^.generictype[i-1]:=
+       Ppas_record(srctree^.content)^.generictype[i-1];
+      end;
+    end;
   end
  else if(srctree^.treetype=pas_node_return) then
   begin
@@ -13604,7 +15932,7 @@ begin
   end;
 end;
 function pas_tree_search_for_list(list:pas_tree_list;searchitem:Ppas_tree;
-ifdefcond:cov_ifdef;specindex:byte=0):boolean;
+ifdefcond:cov_ifdef;specindex:byte=0):SizeInt;
 var i,j,iend,count:SizeInt;
 begin
  count:=length(list.tree);
@@ -13622,27 +15950,27 @@ begin
    if(searchitem^.treetype=pas_node_record) and (list.tree[i-1]^.treetype=pas_node_record) then
     begin
      if(Ppas_record(searchitem^.content)^.recordname=
-     Ppas_record(list.tree[i-1]^.content)^.recordname) then exit(true);
+     Ppas_record(list.tree[i-1]^.content)^.recordname) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_class) and (list.tree[i-1]^.treetype=pas_node_class) then
     begin
      if(Ppas_class(searchitem^.content)^.classname=
-     Ppas_class(list.tree[i-1]^.content)^.classname) then exit(true);
+     Ppas_class(list.tree[i-1]^.content)^.classname) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_type) and (list.tree[i-1]^.treetype=pas_node_type) then
     begin
      if(Ppas_type(searchitem^.content)^.newname
-     =Ppas_type(list.tree[i-1]^.content)^.newname) then exit(true);
+     =Ppas_type(list.tree[i-1]^.content)^.newname) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_enum) and (list.tree[i-1]^.treetype=pas_node_enum) then
     begin
      if(Ppas_enum(searchitem^.content)^.enumname=
-     Ppas_enum(list.tree[i-1]^.content)^.enumname) then exit(true);
+     Ppas_enum(list.tree[i-1]^.content)^.enumname) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_uses) and (list.tree[i-1]^.treetype=pas_node_uses) then
     begin
      if(Ppas_uses(searchitem^.content)^.usesname=
-     Ppas_uses(list.tree[i-1]^.content)^.usesname) then exit(true);
+     Ppas_uses(list.tree[i-1]^.content)^.usesname) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_class_function)
    and (list.tree[i-1]^.treetype=pas_node_class_function) then
@@ -13652,13 +15980,13 @@ begin
      (Ppas_class_function(searchitem^.content)^.funcname=
      Ppas_class_function(list.tree[i-1]^.content)^.funcname)
      and (searchitem^.count=0) and
-     (searchitem^.count=list.tree[i-1]^.count) and (specindex=1) then exit(true)
+     (searchitem^.count=list.tree[i-1]^.count) and (specindex=1) then exit(i)
      else if(Ppas_class_function(searchitem^.content)^.hostname=
      Ppas_class_function(list.tree[i-1]^.content)^.hostname) and
      (Ppas_class_function(searchitem^.content)^.funcname=
      Ppas_class_function(list.tree[i-1]^.content)^.funcname)
      and (searchitem^.count>0) and
-     (searchitem^.count=list.tree[i-1]^.count) and (specindex=2) then exit(true);
+     (searchitem^.count=list.tree[i-1]^.count) and (specindex=2) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_function)
    and (list.tree[i-1]^.treetype=pas_node_function) then
@@ -13666,11 +15994,11 @@ begin
      if(Ppas_function(searchitem^.content)^.funcname=
      Ppas_function(list.tree[i-1]^.content)^.funcname)
      and (searchitem^.count=0) and
-     (searchitem^.count=list.tree[i-1]^.count) and (specindex=1) then exit(true)
+     (searchitem^.count=list.tree[i-1]^.count) and (specindex=1) then exit(i)
      else if(Ppas_function(searchitem^.content)^.funcname=
      Ppas_function(list.tree[i-1]^.content)^.funcname)
      and (searchitem^.count>0) and
-     (searchitem^.count=list.tree[i-1]^.count) and (specindex=2) then exit(true);
+     (searchitem^.count=list.tree[i-1]^.count) and (specindex=2) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_operator)
    and (list.tree[i-1]^.treetype=pas_node_operator) then
@@ -13678,38 +16006,38 @@ begin
      if(Ppas_operator(searchitem^.content)^.signname=
      Ppas_operator(list.tree[i-1]^.content)^.signname)
      and (searchitem^.count=0) and
-     (searchitem^.count=list.tree[i-1]^.count) and (specindex=1) then exit(true)
+     (searchitem^.count=list.tree[i-1]^.count) and (specindex=1) then exit(i)
      else if(Ppas_operator(searchitem^.content)^.signname=
      Ppas_operator(list.tree[i-1]^.content)^.signname)
      and (searchitem^.count>0) and
-     (searchitem^.count=list.tree[i-1]^.count) and (specindex=2) then exit(true);
+     (searchitem^.count=list.tree[i-1]^.count) and (specindex=2) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_const)
    and (list.tree[i-1]^.treetype=pas_node_const) then
     begin
      if(Ppas_const(searchitem^.content)^.constname=
-     Ppas_const(list.tree[i-1]^.content)^.constname) then exit(true);
+     Ppas_const(list.tree[i-1]^.content)^.constname) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_variable)
    and (list.tree[i-1]^.treetype=pas_node_variable) then
     begin
      if(Ppas_variable(searchitem^.content)^.varname=
-     Ppas_variable(list.tree[i-1]^.content)^.varname) then exit(true);
+     Ppas_variable(list.tree[i-1]^.content)^.varname) then exit(i);
     end
    else if(searchitem^.treetype=pas_node_label_declare)
    and (list.tree[i-1]^.treetype=pas_node_label_declare) then
     begin
      if(Ppas_label_declare(searchitem^.content)^.name=
-     Ppas_label_declare(list.tree[i-1]^.content)^.name) then exit(true);
+     Ppas_label_declare(list.tree[i-1]^.content)^.name) then exit(i);
     end;
   end;
- pas_tree_search_for_list:=false;
+ pas_tree_search_for_list:=0;
 end;
 procedure pas_tree_get_list(const roottree:Ppas_tree;var list:pas_tree_list;specindex:byte=0;init:boolean=true);
 var i,j,k,layer:SizeInt;
     basetree,temptree,temptree2:Ppas_tree;
     tempifdef:cov_ifdef;
-    bool:boolean;
+    bool:SizeInt;
 begin
  if(init) then
   begin
@@ -13764,7 +16092,7 @@ begin
      else if(basetree^.treetype=pas_node_uses) and (specindex=1) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef);
-       if(bool=true) then continue;
+       if(bool>0) and (layer=0) then continue;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13774,7 +16102,7 @@ begin
      else if(basetree^.treetype=pas_node_type) and (specindex=2) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef);
-       if(bool=true) then continue;
+       if(bool>0) and (layer=0) then continue;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13784,7 +16112,7 @@ begin
      else if(basetree^.treetype=pas_node_record) and (specindex=2) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef);
-       if(bool=true) then continue;
+       if(bool>0) and (layer=0) then continue;
        temptree:=basetree;
        pas_tree_get_list(temptree,list,specindex,false);
        inc(list.count);
@@ -13796,7 +16124,7 @@ begin
      else if(basetree^.treetype=pas_node_class) and (specindex=2) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef);
-       if(bool=true) then continue;
+       if(bool>0) and (layer=0) then continue;
        temptree:=basetree;
        pas_tree_get_list(temptree,list,specindex,false);
        inc(list.count);
@@ -13806,8 +16134,11 @@ begin
        j:=length(list.tree)-1;
        while(j>0)do
         begin
-         k:=2; temptree2:=list.tree[j-1];
-         while(Ppas_class(temptree2^.content)^.classname=
+         k:=2;
+         temptree2:=list.tree[j-1];
+         while(Ppas_class(temptree^.content)^.inheritcount>=2) and
+         (temptree2^.treetype=pas_node_class) and
+         (Ppas_class(temptree2^.content)^.classname=
          Ppas_class(temptree^.content)^.inheritclass[k-1]) and
          (k<=Ppas_class(temptree2^.content)^.inheritcount) do
           begin
@@ -13822,7 +16153,7 @@ begin
      else if(basetree^.treetype=pas_node_enum) and (specindex=2) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef);
-       if(bool=true) then break;
+       if(bool>0) then break;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13832,7 +16163,7 @@ begin
      else if(basetree^.treetype=pas_node_const) and (specindex=3) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef);
-       if(bool=true) then continue;
+       if(bool>0) then continue;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13842,7 +16173,19 @@ begin
      else if(basetree^.treetype=pas_node_variable) and (specindex=4) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef);
-       if(bool=true) then continue;
+       if(bool>0) and (layer=0) then
+        begin
+         if(Ppas_variable(basetree^.content)^.varext=false) and
+         (Ppas_variable(list.tree[bool-1]^.content)^.varext=true) then
+          begin
+           dec(list.count);
+           Delete(list.tree,bool-1,1);
+          end
+         else
+          begin
+           continue;
+          end;
+        end;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13860,7 +16203,19 @@ begin
      else if(basetree^.treetype=pas_node_function) and (specindex>=6) and (specindex<=7) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef,specindex-5);
-       if(bool=true) and (layer=0) then continue;
+       if(bool>0) and (layer=0) then
+        begin
+         if(Ppas_function(basetree^.content)^.ext=false) and
+         (Ppas_function(list.tree[bool-1]^.content)^.ext=true) then
+          begin
+           dec(list.count);
+           Delete(list.tree,bool-1,1);
+          end
+         else
+          begin
+           continue;
+          end;
+        end;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13870,7 +16225,19 @@ begin
      else if(basetree^.treetype=pas_node_class_function) and (specindex=7) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef,specindex-5);
-       if(bool=true) and (layer=0) then continue;
+       if(bool>0) and (layer=0) then
+        begin
+         if(Ppas_class_function(basetree^.content)^.ext=false) and
+         (Ppas_class_function(list.tree[bool-1]^.content)^.ext=true) then
+          begin
+           dec(list.count);
+           Delete(list.tree,bool-1,1);
+          end
+         else
+          begin
+           continue;
+          end;
+        end;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -13880,7 +16247,19 @@ begin
      else if(basetree^.treetype=pas_node_operator) and (specindex>=6) and (specindex<=7) then
       begin
        bool:=pas_tree_search_for_list(list,basetree,tempifdef,specindex-5);
-       if(bool=true) and (layer=0) then continue;
+       if(bool>0) and (layer=0) then
+        begin
+         if(Ppas_operator(basetree^.content)^.ext=false) and
+         (Ppas_operator(list.tree[bool-1]^.content)^.ext=true) then
+          begin
+           dec(list.count);
+           Delete(list.tree,bool-1,1);
+          end
+         else
+          begin
+           continue;
+          end;
+        end;
        inc(list.count);
        SetLength(list.tree,length(list.tree)+1);
        pas_tree_copy(basetree,list.tree[length(list.tree)-1]);
@@ -14006,20 +16385,6 @@ begin
       end;
     end;
    inc(i);
-  end;
-end;
-procedure fix_pas_tree(pastree:Ppas_tree);
-var i:SizeInt;
-    temptree:Ppas_tree;
-begin
- i:=1;
- if(pastree=nil) then
-  begin
-
-  end
- else
-  begin
-
   end;
 end;
 procedure pas_tree_reconstruct(const orgtree:Ppas_tree;var desttree:Ppas_tree);
@@ -14528,11 +16893,26 @@ begin
    if(temptree2=nil) or ((temptree2<>nil) and (temptree2^.treetype<>pas_node_class)
    and (temptree2^.treetype<>pas_node_record) and (temptree2^.treetype<>pas_node_type)
    and (temptree2^.treetype<>pas_node_enum)) then
-   tempstr:='type '+Ppas_class(temptree2^.content)^.classname+'='
-   else tempstr:='     '+Ppas_class(temptree2^.content)^.classname+'=';
+   tempstr:='type ' else tempstr:='     ';
+   if(Ppas_class(temptree^.content)^.isgeneric=true) then
+    begin
+     tempstr:=tempstr+'generic '+Ppas_class(temptree2^.content)^.classname;
+     for i:=1 to Ppas_class(temptree^.content)^.genericcount do
+      begin
+       if(i=1) then tempstr:=tempstr+'<';
+       tempstr:=tempstr+Ppas_class(temptree^.content)^.generictype[i-1];
+       if(i<Ppas_class(temptree^.content)^.genericcount) then tempstr:=tempstr+','
+       else tempstr:=tempstr+'>';
+      end;
+    end
+   else tempstr:=tempstr+Ppas_class(temptree^.content)^.classname;
+   tempstr:=tempstr+'=';
    len:=length(tempstr);
+   if(Ppas_class(temptree^.content)^.inheritcount>=1) then
    res:=res+generate_blank_string(blankcount)+tempstr+'class('
-   +Ppas_class(temptree2^.content)^.inheritclass[0]+')'#10;
+   +Ppas_class(temptree^.content)^.inheritclass[0]+')'#10
+   else
+   res:=res+generate_blank_string(blankcount)+tempstr+'class'#10;
    i:=1; len:=temptree^.count;
    if(len>0) then res:=res+convert_pas_tree_to_string(temptree,blankcount+len);
    res:=res+generate_blank_string(blankcount+len)+'end;'#10;
@@ -14540,6 +16920,7 @@ begin
  else if(temptree^.treetype=pas_node_class_function) then
   begin
    res:=res+generate_blank_string(blankcount);
+   if(Ppas_function(temptree^.content)^.isgeneric) then res:=res+'generic ';
    if(Ppas_class_function(temptree^.content)^.resulttype='') then
     begin
      if(temptree^.parent^.treetype=pas_node_class) then
@@ -14562,6 +16943,16 @@ begin
        res:=res+'destructor '+Ppas_class_function(temptree^.content)^.funcname
        else
        res:=res+'procedure '+Ppas_class_function(temptree^.content)^.funcname;
+      end;
+     if(Ppas_class_function(temptree^.content)^.isgeneric=true) then
+      begin
+       for i:=1 to Ppas_class_function(temptree^.content)^.genericcount do
+        begin
+         if(i=1) then res:=res+'<';
+         res:=res+Ppas_class_function(temptree^.content)^.generictype[i-1];
+         if(i<Ppas_class_function(temptree^.content)^.genericcount) then tempstr:=tempstr+','
+         else res:=res+'>';
+        end;
       end;
      i:=1; len:=Ppas_class_function(temptree^.content)^.paramcount;
      while(i<=len)do
@@ -14612,6 +17003,16 @@ begin
        res:=res+'destructor '+Ppas_class_function(temptree^.content)^.funcname
        else
        res:=res+'function '+Ppas_class_function(temptree^.content)^.funcname;
+      end;
+     if(Ppas_class_function(temptree^.content)^.isgeneric=true) then
+      begin
+       for i:=1 to Ppas_class_function(temptree^.content)^.genericcount do
+        begin
+         if(i=1) then res:=res+'<';
+         res:=res+Ppas_class_function(temptree^.content)^.generictype[i-1];
+         if(i<Ppas_class_function(temptree^.content)^.genericcount) then tempstr:=tempstr+','
+         else res:=res+'>';
+        end;
       end;
      i:=1; len:=Ppas_class_function(temptree^.content)^.paramcount;
      while(i<=len)do
@@ -14697,15 +17098,29 @@ begin
   end
  else if(temptree^.treetype=pas_node_expression) then
   begin
-   res:=res+generate_blank_string(blankcount)+
-   c_string_to_string(Ppas_expression(temptree^.content)^.content)+';'#10;
+   if(Ppas_expression(temptree^.content)^.content.count>0) then
+    begin
+     res:=res+generate_blank_string(blankcount)+
+     c_string_to_string(Ppas_expression(temptree^.content)^.content)+';'#10;
+    end;
   end
  else if(temptree^.treetype=pas_node_function) then
   begin
    res:=res+generate_blank_string(blankcount);
+   if(Ppas_function(temptree^.content)^.isgeneric) then res:=res+'generic ';
    if(Ppas_function(temptree^.content)^.resulttype='') then
     begin
      res:=res+'procedure '+Ppas_function(temptree^.content)^.funcname;
+     if(Ppas_function(temptree^.content)^.isgeneric=true) then
+      begin
+       for i:=1 to Ppas_function(temptree^.content)^.genericcount do
+        begin
+         if(i=1) then res:=res+'<';
+         res:=res+Ppas_function(temptree^.content)^.generictype[i-1];
+         if(i<Ppas_function(temptree^.content)^.genericcount) then tempstr:=tempstr+','
+         else res:=res+'>';
+        end;
+      end;
      i:=1; len:=Ppas_function(temptree^.content)^.paramcount;
      while(i<=len)do
       begin
@@ -14728,6 +17143,16 @@ begin
    else
     begin
      res:=res+'function '+Ppas_function(temptree^.content)^.funcname;
+     if(Ppas_function(temptree^.content)^.isgeneric=true) then
+      begin
+       for i:=1 to Ppas_function(temptree^.content)^.genericcount do
+        begin
+         if(i=1) then res:=res+'<';
+         res:=res+Ppas_function(temptree^.content)^.generictype[i-1];
+         if(i<Ppas_function(temptree^.content)^.genericcount) then tempstr:=tempstr+','
+         else res:=res+'>';
+        end;
+      end;
      i:=1; len:=Ppas_function(temptree^.content)^.paramcount;
      while(i<=len)do
       begin
@@ -14929,8 +17354,20 @@ begin
    if(temptree2=nil) or ((temptree2<>nil) and (temptree2^.treetype<>pas_node_class)
    and (temptree2^.treetype<>pas_node_record) and (temptree2^.treetype<>pas_node_type)
    and (temptree2^.treetype<>pas_node_enum)) then
-   tempstr:='type '+Ppas_record(temptree^.content)^.recordname+'='
-   else tempstr:='     '+Ppas_record(temptree^.content)^.recordname+'=';
+   tempstr:='type ' else tempstr:='     ';
+   if(Ppas_record(temptree^.content)^.isgeneric=true) then
+    begin
+     tempstr:=tempstr+'generic '+Ppas_record(temptree^.content)^.recordname;
+     for i:=1 to Ppas_record(temptree^.content)^.genericcount do
+      begin
+       if(i=1) then tempstr:=tempstr+'<';
+       tempstr:=tempstr+Ppas_record(temptree^.content)^.generictype[i-1];
+       if(i<Ppas_record(temptree^.content)^.genericcount) then tempstr:=tempstr+','
+       else tempstr:=tempstr+'>';
+      end;
+    end
+   else tempstr:=tempstr+Ppas_record(temptree^.content)^.recordname;
+   tempstr:=tempstr+'=';
    len:=length(tempstr);
    if(Ppas_record(temptree^.content)^.recordtype=0) then
    res:=res+generate_blank_string(blankcount)+tempstr+'record'#10

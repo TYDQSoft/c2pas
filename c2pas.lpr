@@ -17,10 +17,10 @@ begin
  totallist:=TStringList.Create;
  while(ii<=length(includepath))do
   begin
-   partlist:=FindAllDirectories(includepath[ii]);
+   partlist:=FindAllDirectories(includepath[ii-1]);
    for jj:=1 to partlist.Count do
     begin
-     totallist.Add(partlist[jj]);
+     totallist.Add(partlist[jj-1]);
     end;
    partlist.Free;
    inc(ii);
@@ -38,11 +38,11 @@ begin
  {Specifying the output file name}
  codename:=ExtractFileName(inputname);
  kk:=Pos('.',codename);
- codename:=Trim(Copy(codename,1,kk));
+ codename:=Trim(Copy(codename,1,kk-1));
  {If you need reference file,open reference switch to enable it}
  if(needreference=true) and ((ExtractFileExt(inputname)='.h') or (ExtractFileExt(inputname)='.hpp')) then
   begin
-   tempstr:=ExtractFilePath(inputname)+codename+'.h';
+   tempstr:=ExtractFilePath(outputname)+codename+'.h';
    AssignFile(reffile,tempstr);
    Rewrite(reffile);
    writeln(reffile,content);
@@ -50,7 +50,7 @@ begin
   end
  else if(needreference=true) then
   begin
-   tempstr:=ExtractFilePath(inputname)+codename+'.c';
+   tempstr:=ExtractFilePath(outputname)+codename+'.c';
    AssignFile(reffile,tempstr);
    Rewrite(reffile);
    writeln(reffile,content);
@@ -376,8 +376,15 @@ begin
    readln(total); i:=0;
    while(i<total)do
     begin
-     writeln('Input the include path ',j,':');
+     writeln('Input the include path ',i+1,':');
      readln(tempstr);
+     if(length(tempstr)>=2) and ((tempstr[1]='"') or (tempstr[1]=#39)) then
+      begin
+       if(tempstr[length(tempstr)]='"') or (tempstr[1]=#39) then
+       tempstr:=Copy(tempstr,2,length(tempstr)-2)
+       else
+       tempstr:=Copy(tempstr,2,length(tempstr)-1)
+      end;
      if(DirectoryExists(tempstr)) then
       begin
        inc(i);
@@ -410,7 +417,7 @@ begin
      goto label1;
     end;
    label2:
-   writeln('Input the output file type:');
+   writeln('Input the output file type(l/library or p/program or u/unit):');
    readln(tempstr);
    if(LowerCase(tempstr)='l') or (LowerCase(tempstr)='library') then
     begin
@@ -426,7 +433,7 @@ begin
     end
    else
     begin
-     writeln('ERROR:Output file type '+tempstr+'.');
+     writeln('ERROR:Output file type '+tempstr+'does not exist.');
      goto label2;
     end;
    writeln('Input the output file name:');
@@ -449,7 +456,7 @@ begin
      goto label3;
     end;
    label4:
-   writeln('Input Yes/No to open the switch of debugging code');
+   writeln('Input Yes/No to open the switch of debugging code:');
    readln(tempstr);
    if(LowerCase(tempstr)='yes') or (LowerCase(tempstr)='y') then
     begin
