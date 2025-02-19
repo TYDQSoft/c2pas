@@ -119,7 +119,11 @@ begin
        tempstr:=Copy(tempstr,3,length(tempstr)-2);
        if(tempstr[1]='"') or (tempstr[1]=#39) then
         begin
-         tempstr:=Copy(tempstr,2,length(tempstr));
+         tempstr:=Copy(tempstr,2,length(tempstr)-1);
+        end;
+       if(tempstr[length(tempstr)]='"') or (tempstr[length(tempstr)]=#39) then
+        begin
+         tempstr:=Copy(tempstr,1,length(tempstr)-1);
         end;
        if(FileExists(tempstr)=false) then
         begin
@@ -141,7 +145,11 @@ begin
        tempstr:=Copy(tempstr,3,length(tempstr)-2);
        if(tempstr[1]='"') or (tempstr[1]=#39) then
         begin
-         tempstr:=Copy(tempstr,2,length(tempstr));
+         tempstr:=Copy(tempstr,2,length(tempstr)-1);
+        end;
+       if(tempstr[length(tempstr)]='"') or (tempstr[length(tempstr)]=#39) then
+        begin
+         tempstr:=Copy(tempstr,1,length(tempstr)-1);
         end;
        if(p4='') then
         begin
@@ -158,7 +166,11 @@ begin
        tempstr:=Copy(tempstr,3,length(tempstr)-2);
        if(tempstr[1]='"') or (tempstr[1]=#39) then
         begin
-         tempstr:=Copy(tempstr,2,length(tempstr));
+         tempstr:=Copy(tempstr,2,length(tempstr)-1);
+        end;
+       if(tempstr[length(tempstr)]='"') or (tempstr[length(tempstr)]=#39) then
+        begin
+         tempstr:=Copy(tempstr,1,length(tempstr)-1);
         end;
        if(DirectoryExists(tempstr)) then
         begin
@@ -177,7 +189,11 @@ begin
        tempstr:=Copy(tempstr,3,length(tempstr)-2);
        if(tempstr[1]='"') or (tempstr[1]=#39) then
         begin
-         tempstr:=Copy(tempstr,2,length(tempstr));
+         tempstr:=Copy(tempstr,2,length(tempstr)-1);
+        end;
+       if(tempstr[length(tempstr)]='"') or (tempstr[length(tempstr)]=#39) then
+        begin
+         tempstr:=Copy(tempstr,1,length(tempstr)-1);
         end;
        if(LowerCase(tempstr)='on') then
         begin
@@ -198,7 +214,11 @@ begin
        tempstr:=Copy(tempstr,3,length(tempstr)-2);
        if(tempstr[1]='"') or (tempstr[1]=#39) then
         begin
-         tempstr:=Copy(tempstr,2,length(tempstr));
+         tempstr:=Copy(tempstr,2,length(tempstr)-1);
+        end;
+       if(tempstr[length(tempstr)]='"') or (tempstr[length(tempstr)]=#39) then
+        begin
+         tempstr:=Copy(tempstr,1,length(tempstr)-1);
         end;
        if(LowerCase(tempstr)='on') then
         begin
@@ -219,7 +239,11 @@ begin
        tempstr:=Copy(tempstr,3,length(tempstr)-2);
        if(tempstr[1]='"') or (tempstr[1]=#39) then
         begin
-         tempstr:=Copy(tempstr,2,length(tempstr));
+         tempstr:=Copy(tempstr,2,length(tempstr)-1);
+        end;
+       if(tempstr[length(tempstr)]='"') or (tempstr[length(tempstr)]=#39) then
+        begin
+         tempstr:=Copy(tempstr,1,length(tempstr)-1);
         end;
        if(LowerCase(tempstr)='u') or (LowerCase(tempstr)='unit') then
         begin
@@ -239,7 +263,7 @@ begin
          readln; exit;
         end;
       end
-     else if(Copy(tempstr,1,2)='-p') or (Copy(tempstr,1,2)='-p') then
+     else if(Copy(tempstr,1,2)='-p') or (Copy(tempstr,1,2)='-P') then
       begin
        p7:=true;
       end

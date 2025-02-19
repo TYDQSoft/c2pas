@@ -8,8 +8,9 @@
       <Unit>
         <Filename Value="c2pas.lpr"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="66"/>
-        <CursorPos X="35" Y="73"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="262"/>
+        <CursorPos X="24" Y="266"/>
         <UsageCount Value="201"/>
         <Loaded Value="True"/>
       </Unit>
@@ -24,9 +25,8 @@
       <Unit>
         <Filename Value="converter.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="9887"/>
+        <TopLine Value="9891"/>
         <CursorPos X="41" Y="9898"/>
         <UsageCount Value="201"/>
         <Loaded Value="True"/>
