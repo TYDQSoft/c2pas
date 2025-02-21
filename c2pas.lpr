@@ -93,6 +93,7 @@ begin
  writeln('Convertion is done!');
  writeln('You can find the file in path '+ExpandFileName(outputname));
  writeln('Press Enter to exit the program,you can use it as a assitant to code translation.');
+ writeln('Convertion cannot be 100 percent correct,you should edit the converted code manually.');
  readln;
 end;
 var i,j:SizeInt;
@@ -293,9 +294,14 @@ begin
         begin
          p5:=false;
         end
-       else
+       else if(tempstr<>'') then
         begin
          writeln('ERROR:unknown reference switch mode '+tempstr+'.');
+         readln; exit;
+        end
+       else
+        begin
+         writeln('ERROR:switch mode is empty.');
          readln; exit;
         end;
       end
@@ -318,9 +324,14 @@ begin
         begin
          p5:=false;
         end
-       else
+       else if(tempstr<>'') then
         begin
          writeln('ERROR:unknown reference switch mode '+tempstr+'.');
+         readln; exit;
+        end
+       else
+        begin
+         writeln('ERROR:reference switch mode is empty.');
          readln; exit;
         end;
       end
@@ -347,6 +358,11 @@ begin
        else if(LowerCase(tempstr)='off') then
         begin
          p6:=false;
+        end
+       else if(tempstr='') then
+        begin
+         writeln('ERROR:debug switch mode is empty.');
+         readln; exit;
         end
        else
         begin
@@ -377,6 +393,11 @@ begin
        else if(LowerCase(tempstr)='off') then
         begin
          p6:=false;
+        end
+       else if(tempstr='') then
+        begin
+         writeln('ERROR:debug switch mode is empty.');
+         readln; exit;
         end
        else
         begin
@@ -412,6 +433,11 @@ begin
         begin
          p3:=2;
         end
+       else if(tempstr<>'') then
+        begin
+         writeln('ERROR:pascal code file type is empty.');
+         readln; exit;
+        end
        else
         begin
          writeln('ERROR:unknown pascal code file type  '+tempstr+'.');
@@ -445,6 +471,11 @@ begin
        else if(LowerCase(tempstr)='l') or (LowerCase(tempstr)='library') then
         begin
          p3:=2;
+        end
+       else if(tempstr<>'') then
+        begin
+         writeln('ERROR:pascal code file type is empty.');
+         readln; exit;
         end
        else
         begin
@@ -485,6 +516,7 @@ begin
        writeln('         Example:-d/-D/--debugOn');
        writeln('         -h/-H/--help means you need the help manual for this program(must be only one).');
        writeln('         Example:-h/-H/--help');
+       writeln('         Warning:-p/-P/--pascalize is obsolete');
        writeln('         -p/-P/--pascalize means enable pascalize standard function(Default is disabled).');
        writeln('         Example:-p/-P/--pascalize');
        writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P');
@@ -544,6 +576,7 @@ begin
        writeln('         Example:-d/-D/--debugOn');
        writeln('         -h/-H/--help means you need the help manual for this program(must be only one).');
        writeln('         Example:-h/-H/--help');
+       writeln('         Warning:-p/-P/--pascalize is obsolete');
        writeln('         -p/-P/--pascalize means enable pascalize standard function(Default is disabled).');
        writeln('         Example:-p/-P/--pascalize');
        writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P');
