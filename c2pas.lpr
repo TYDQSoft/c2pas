@@ -3,7 +3,7 @@ program c2pas;
 uses prehandler,fileutil,sysutils,classes,converter;
 
 procedure c2pas_convert(inputname:string;includepath:array of string;outputtype:byte;
-outputname:string;needreference:boolean;debug:boolean;plize:boolean);
+outputname:string;needreference:boolean;debug:boolean;plize:boolean;noifdef:boolean);
 var ii,jj,kk:SizeInt;
     tempstr:string;
     source,totallist,partlist:TStringList;
@@ -30,9 +30,13 @@ begin
  source.LoadFromFile(inputname);
  content:=source.Text;
  source.Free;
+ writeln('Reading the file ',inputname,'......');
+ {No ifdef option}
+ codenoifdef:=noifdef;
  {Prehandle the original file}
  prehandler_handle_code(content,totallist,(ExtractFileExt(inputname)='.h')
  or (ExtractFileExt(inputname)='.hpp'));
+ writeln('Initialize the file ',inputname,'......');
  {Specifying the output type}
  species:=outputtype;
  {Specifying the output file name}
@@ -105,6 +109,7 @@ var i,j:SizeInt;
     p5:boolean=false;
     p6:boolean=false;
     p7:boolean=false;
+    p8:boolean=false;
     total:SizeInt;
 label label1,label2,label3,label4;
 begin
@@ -487,6 +492,10 @@ begin
       begin
        p7:=true;
       end
+     else if(tempstr='-n') or (tempstr='-N') or (LowerCase(Copy(tempstr,1,11))='--noifdef') then
+      begin
+       p8:=true;
+      end
      else if(Copy(tempstr,1,2)='-h') or (Copy(tempstr,1,2)='-H')
      or (LowerCase(Copy(tempstr,1,6))='--help') then
       begin
@@ -519,7 +528,9 @@ begin
        writeln('         Warning:-p/-P/--pascalize is obsolete');
        writeln('         -p/-P/--pascalize means enable pascalize standard function(Default is disabled).');
        writeln('         Example:-p/-P/--pascalize');
-       writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P');
+       writeln('         -n/-N/--Noifdef means the exclusion of ifdef and define.');
+       writeln('         Example:-n/-N/--Noifdef');
+       writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P -N');
        writeln('         Warning:Any path must be convert with "",or you will get an Access Violation Error!');
        writeln('         You can press enter to exit the help manual.');
        readln; exit;
@@ -541,7 +552,7 @@ begin
      writeln('no output file name,use out.pas as default.');
      readln; exit;
     end;
-   c2pas_convert(p1,p2,p3,p4,p5,p6,p7);
+   c2pas_convert(p1,p2,p3,p4,p5,p6,p7,p8);
   end
  else if(ParamCount=0) then
   begin
@@ -551,37 +562,39 @@ begin
    if(LowerCase(tempstr)<>'y') and (LowerCase(tempstr)<>'yes') then
     begin
      writeln('Template:c2pas <commands>');
-       writeln('         Tips:It will delete all comments in code to prevent it for errors');
-       writeln('         These are available codes below:');
-       writeln('         -i/-I/--input means input file path(must be only one).');
-       writeln('         -i/-I/--input<input file path>');
-       writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\app.c"');
-       writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/app.c"');
-       writeln('         -o/-O/--output means output file path(must be only one).');
-       writeln('         -o/-O/--output<output file path>');
-       writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\out.pas"');
-       writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/out.pas"');
-       writeln('         -l/-L/--include means include file path(can be multiple).');
-       writeln('         -l/-L/--include<include file path>');
-       writeln('         Example:(Windows)-l/-L"D:\binutils-2.43"');
-       writeln('                 (Linux/Unix)-l/-L"home/tydq/binutils-2.43"');
-       writeln('         -t/-T/--type means your pascal code file type(must be only one)(unit is default).');
-       writeln('         -t/-T/--type<program/unit/library>/<p/u/l>');
-       writeln('         Example:-t/-T/--typeunit');
-       writeln('         -r/-R/--reference means whether you need reference c code file or not(must be only one).');
-       writeln('         -r/-R/--reference<On/Off>');
-       writeln('         Example:-r/-R/--referenceOn');
-       writeln('         -d/-D/--debug means debug mode switch(On is open,off is close)(must be only one).');
-       writeln('         -d/-D/--debug<On/Off>');
-       writeln('         Example:-d/-D/--debugOn');
-       writeln('         -h/-H/--help means you need the help manual for this program(must be only one).');
-       writeln('         Example:-h/-H/--help');
-       writeln('         Warning:-p/-P/--pascalize is obsolete');
-       writeln('         -p/-P/--pascalize means enable pascalize standard function(Default is disabled).');
-       writeln('         Example:-p/-P/--pascalize');
-       writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P');
-       writeln('         Warning:Any path must be convert with "",or you will get an Access Violation Error!');
-       writeln('         You can press enter to exit the help manual.');
+     writeln('         Tips:It will delete all comments in code to prevent it for errors');
+     writeln('         These are available codes below:');
+     writeln('         -i/-I/--input means input file path(must be only one).');
+     writeln('         -i/-I/--input<input file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\app.c"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/app.c"');
+     writeln('         -o/-O/--output means output file path(must be only one).');
+     writeln('         -o/-O/--output<output file path>');
+     writeln('         Example:(Windows)-i/-I"D:\binutils-2.43\gas\out.pas"');
+     writeln('                 (Linux/Unix)-i/-I"home/tydq/binutils-2.43/gas/out.pas"');
+     writeln('         -l/-L/--include means include file path(can be multiple).');
+     writeln('         -l/-L/--include<include file path>');
+     writeln('         Example:(Windows)-l/-L"D:\binutils-2.43"');
+     writeln('                 (Linux/Unix)-l/-L"home/tydq/binutils-2.43"');
+     writeln('         -t/-T/--type means your pascal code file type(must be only one)(unit is default).');
+     writeln('         -t/-T/--type<program/unit/library>/<p/u/l>');
+     writeln('         Example:-t/-T/--typeunit');
+     writeln('         -r/-R/--reference means whether you need reference c code file or not(must be only one).');
+     writeln('         -r/-R/--reference<On/Off>');
+     writeln('         Example:-r/-R/--referenceOn');
+     writeln('         -d/-D/--debug means debug mode switch(On is open,off is close)(must be only one).');
+     writeln('         -d/-D/--debug<On/Off>');
+     writeln('         Example:-d/-D/--debugOn');
+     writeln('         -h/-H/--help means you need the help manual for this program(must be only one).');
+     writeln('         Example:-h/-H/--help');
+     writeln('         Warning:-p/-P/--pascalize is obsolete');
+     writeln('         -p/-P/--pascalize means enable pascalize standard function(Default is disabled).');
+     writeln('         Example:-p/-P/--pascalize');
+     writeln('         -n/-N/--Noifdef means the exclusion of ifdef and define.');
+     writeln('         Example:-n/-N/--Noifdef');
+     writeln('         Total Example:c2pas -Iout.c -oout.pas -Linclude -Roff -Doff -Tunit -P -N');
+     writeln('         Warning:Any path must be convert with "",or you will get an Access Violation Error!');
+     writeln('         You can press enter to exit the help manual.');
      readln; exit;
     end;
    writeln('Input the include path number:');
@@ -701,7 +714,10 @@ begin
    writeln('Do you want to pascalize the standard function(Input y/yes to enable,other is disable)?');
    readln(tempstr);
    if(LowerCase(tempstr)='yes') or (LowerCase(tempstr)='y') then p7:=true else p7:=false;
-   c2pas_convert(p1,p2,p3,p4,p5,p6,p7);
+   writeln('Do you want to exclude all ifdef and defines(Input y/yes to exclude,other is include)?');
+   readln(tempstr);
+   if(LowerCase(tempstr)='yes') or (LowerCase(tempstr)='y') then p8:=true else p8:=false;
+   c2pas_convert(p1,p2,p3,p4,p5,p6,p7,p8);
   end;
 end.
 
