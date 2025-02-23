@@ -13,7 +13,7 @@ var ii,jj,kk:SizeInt;
     reffile,pasfile:Text;
 begin
  {Loading the include file searching path}
- ii:=1; plizefunc:=plize;
+ ii:=1; kk:=0; plizefunc:=plize;
  totallist:=TStringList.Create;
  while(ii<=length(includepath))do
   begin
@@ -21,10 +21,16 @@ begin
    for jj:=1 to partlist.Count do
     begin
      totallist.Add(partlist[jj-1]);
+     if(debug=true) then
+      begin
+       inc(kk);
+       writeln('Include Path ',kk,':',partlist[jj-1]);
+      end;
     end;
    partlist.Free;
    inc(ii);
   end;
+ kk:=0;
  {Loading the solo original file}
  source:=TStringList.Create;
  source.LoadFromFile(inputname);
@@ -113,6 +119,8 @@ var i,j:SizeInt;
     total:SizeInt;
 label label1,label2,label3,label4;
 begin
+ {Initialize the program}
+ SetLength(p2,0);
  {Handle the external commands}
  if(ParamCount>=1) then
   begin
